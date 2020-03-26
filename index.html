@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Podcast call recorder</title>
+    <title>Bookclub session</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -20,9 +20,8 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
-<script src="https://pi.pe/iot/js/qrcode.js"></script>
 
-<a href="index.html"><h1 id="title" class="text-center">Podcast interview recorder</h1></a>
+<a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
 <div class="container">
     <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
     <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
@@ -47,10 +46,13 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Send this url to the interviewee. </h5>
+                <h5 class="modal-title">Send this url to the members. </h5>
             </div>
             <div class="modal-body" id="shareQR">
-                <p>Share this URL to request an interview</p>
+                <p>Share this URL to start a session</p>
+                <p>You can use the share icon at the top of the screen</p>
+                <p>Then email/sms it to each of the book club members</p>
+                <p>Then press 'done'</p>
             </div>
             <div class="modal-footer">
                 <button id="shareDone" type="button" class="btn btn-secondary" data-dismiss="modal" onclick="shared();">Done</button>
@@ -62,10 +64,11 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Accept an interview</h5>
+                <h5 class="modal-title">Accept a book club session</h5>
             </div>
             <div class="modal-body">
                 <p>Click 'accept' to start the call.</p>
+                <p>You also need to permit access to your microphone</p>
             </div>
             <div class="modal-footer">
                 <button id="callAccept" type="button" class="btn btn-secondary" data-dismiss="modal" onclick="accepted();">Accept</button>
@@ -96,9 +99,9 @@
                 <h5 class="modal-title">Sorry</h5>
             </div>
             <div class="modal-body">
-                <p>Unfortunately the browser you are using does not support the media recorder API.</p>
-                <p>Please try hosting the call with Chrome or FireFox or Edge.</p>
-                <p>Your guest can use any modern browser</p>
+                <p>Unfortunately the browser you are using does not support the full webAudio API.</p>
+                <p>Please try hosting the call with Chrome.</p>
+                <p>The members can use any modern browser</p>
             </div>
             <div class="modal-footer">
                 <button id="sad" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
@@ -117,40 +120,248 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
 
 
 
-    var webRTCconfiguration = {
+var webRTCconfiguration = {
+    host : {
         "iceServers": [
             {urls: "stun:146.148.121.175:3478"},
             {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
         ],
         "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+    },
+    guest: {
+        "iceServers": [
+            {urls: "stun:146.148.121.175:3478"},
+        ],
+        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+    }
+};
+
+
+var socket; // used to set up connection with our peers.
+var mid;
+var cid;
+var myac;
+var initiator;
+var localStream;
+var localdcomp;
+var localpanned;
+
+var lastLoss = 0;
+var lastRecv =0;
+var softstereo = false;
+var join;
+
+
+var mute = false;
+var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
+var AudioContext = window.AudioContext || window.webkitAudioContext;
+var sessions = {};
+var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8];
+
+function Session(id) {
+    this.pan = pans.pop();
+    this.fid = id;
+    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator?"host":"guest"], null);
+    this.setupRTC();
+    console.log("created peer connection for "+id);
+    console.log("pan is "+this.pan);
+    this.lcandyStash = [];
+}
+Session.prototype.offerDeal = function (data) {
+    this.pc.setRemoteDescription(data).then(_ =>
+        this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
+            ans.sdp = tweakSDP(ans.sdp);
+            this.pc.setLocalDescription(ans).then(_ =>
+                sendMessage(this.fid, mid, "answer", ans.sdp)
+            )
+        })
+    ).catch((e) => console.log("set Remote offer error", e));
+};
+Session.prototype.answerDeal = function(data){
+    this.pc.setRemoteDescription(data)
+        .then( _ => {
+            //$("#action").text("hangup");
+        })
+        .catch(e => console.log("set Remote answer error", e) );
+};
+Session.prototype.candidateDeal = function(data){
+    var jc = {
+        sdpMLineIndex: 0,
+        candidate: data.sdp
     };
+    console.log("adding candidate ", jc);
+    var nc = new RTCIceCandidate(jc);
+    this.pc.addIceCandidate(nc)
+        .then( _ => console.log("added remote candidate"))
+        .catch((e) => console.log("couldn't add candidate ", e));
+};
+
+Session.prototype.setupRTC = function(){
+        this.pc.onicecandidate = (e) => {
+            console.log("local ice candidate", e.candidate);
+            if (e.candidate != null) {
+                if (this.pc.signalingState == 'stable') {
+                    sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
+                } else {
+                    console.log("stashing ice candidate");
+                    this.lcandyStash.push(e.candidate);
+                }
+            }
+        };
+        this.pc.oniceconnectionstatechange = (e) => {
+            console.log("ice state is changed", this.pc.iceConnectionState);
+            /*
+             "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
+             "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
+             "connected"	A usable pairing of local and remote candidates has been found for all components of the connection, and the connection has been established. It's possible that gathering is still underway, and it's also possible that the ICE agent is still checking candidates against one another looking for a better connection to use.
+             "completed"	The ICE agent has finished gathering candidates, has checked all pairs against one another, and has found a connection for all components.
+             "failed"	The ICE candidate has checked all candidates pairs against one another and has failed to find compatible matches for all components of the connection. It is, however, possible that the ICE agent did find compatible connections for some components.
+             "disconnected"	Checks to ensure that components are still connected failed for at least one component of the RTCPeerConnection. This is a less stringent test than "failed" and may trigger intermittently and resolve just as spontaneously on less reliable networks, or during temporary disconnections. When the problem resolves, the connection may return to the "connected" state.
+             "closed"
+             */
+            if (this.pc.iceConnectionState === "failed"){
+                stopCall();
+            }
+        };
+        // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
+        if ('ontrack' in this.pc) {
+            // if so we use it
+            this.pc.ontrack = (event) => {
+                var stream = event.streams[0];
+                console.log("got remote track ", event.track.kind);
+                this.addStream(stream,event.track.kind);
+            };
+        } else {
+            // if not we use add stream instead
+            this.pc.onaddstream = (event) => {
+                var stream = event.stream;
+                console.log("got remote stream ", stream.kind);
+                this.addStream(stream);
+            }
+        }
+
+        // use this to determine the state of the 'hangup' button and send any candidates we found quickly
+        this.pc.onsignalingstatechange = (evt) => {
+            console.log("signalling state is ", this.pc.signalingState);
+            if (this.pc.signalingState == 'stable') {
+                var can;
+                while (can = this.lcandyStash.pop()) {
+                    console.log("popping candidate off stash")
+                    sendMessage(this.fid, mid, "candidate", can.candidate);
+                }
+                var act = $("#stopCall");
+                act.click( _ => stopCall() );
+                window.onbeforeunload = function() {
+                    return !saved ? "If you leave this page you will end the interview." : null;
+                }
+            }
+        };
+
+};
+Session.prototype.addStream = function(stream,kind) {
+    if (!kind) {
+        kind = "audio/video";
+    }
+    $("#status").text("Call connected to "+this.fid);
+
+    console.log("got new stream" + stream + " kind =" + kind);
+    if (kind.indexOf("audio")!= -1) {
+        if (initiator) {
+            // inbound....
+            var peerin = myac.createMediaStreamSource(stream);
+            this.panned = myac.createStereoPanner();
+            this.panned.pan.value = this.pan;
+            console.log("panned to "+this.pan);
+            peerin.connect(this.panned);
+
+            // now connect panned to :
+            // local destination...
+            this.panned.connect(localdcomp);
+            var that = this;
+
+            // outbound
+            // for now just add the localpanned stream
+
+            this.dcomp = myac.createDynamicsCompressor();
+            if (localpanned){
+                localpanned.connect(dcomp);
+                console.log("connect local stream to dcomp");
+            }
+
+            Object.entries(sessions).forEach(sessionkva => {
+                console.log(sessionkva);
+                var id = sessionkva[0];
+                if (id != this.id) {
+                    var session = sessionkva[1];
+                    that.panned.connect(session.dcomp); // they hear me
+                    session.panned.connect(that.dcomp); // I hear them
+                }
+            });
 
 
+            var peerout = myac.createMediaStreamDestination();
+            this.dcomp.connect(peerout);
+            var pc = this.pc;
+            var stream = peerout.stream;
+            if (pc.addTrack) {
+                stream.getTracks().forEach(track => {
+                    pc.addTrack(track, stream);
+                    console.log("added panned outbound track ", track.id, track.kind);
+                });
+            } else {
+                pc.addStream(stream);
+                console.log("added panned outbound stream");
+            }
+        } else {
+            startRecTime = Date.now();
+            document.getElementById("them").srcObject = stream;
+        }
+        var that = this;
+        window.setInterval(function() {that.checkLoss();},1000);
 
-    var pc; // actual peer connection to our friend
-    var socket; // used to set up connection with our peer.
-    var mid;
-    var fid;
-    var cid;
-    var myac;
-    var initiator;
-    var lcandyStash = [];
-    var rcandyStash = [];
-    var localStream;
-    var dcomp;
-    var recorder;
-    var chunks = [];
-    var saved = false;
-    var startRecTime = 0;
-    var lastLoss = 0;
-    var lastRecv =0;
-    var softstereo = false;
-    var join;
+
+        // audio together here.
+        // depends on role
+        console.log('Audio sample Rate is '+ myac.sampleRate);
+        $("#chosenAction").show();
+        $("#statsZone").show();
+    }
+};
+
+Session.prototype.checkLoss = function(){
+    this.pc.getReceivers()[0].getStats().then(
+        function(rs) {
+            rs.forEach( function (d){
+                    if(d.type ==="inbound-rtp"){
+                        var recvd = d.packetsReceived;
+                        var lost = d.packetsLost;
+                        if (lost > lastLoss){
+                            $("#packetLoss").show();
+                            var diffl = lost - lastLoss;
+                            var diffp = recvd -lastRecv;
+                            var pct = Math.ceil(100.0 * diffl /diffp);
+                            $("#countZero").text(""+pct);
+                        } else {
+                            $("#packetLoss").hide();
+                        }
+                        lastLoss = lost;
+                        lastRecv = recvd;
+                    }
+                    if ((d.type ==="candidate-pair")&&(d.nominated)){
+                        $("#delay").text(""+d.currentRoundTripTime);
+                    }
+                    if (d.type === "remote-candidate"){
+                        $("#remote").text(d.candidateType);
+                    }
+                    if (d.type === "local-candidate"){
+                        $("#local").text(d.candidateType);
+                    }
+                }
+            )
+        });
+}
 
 
-    var mute = false;
-    var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
-    var AudioContext = window.AudioContext || window.webkitAudioContext;
 
 
     // message stuff - used to create direct connection to peer over WEBRTC
@@ -158,7 +369,7 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
     function tweakSDP(sdp){
         var lines = sdp.split("\r\n");
         for (var i=0;i<lines.length;i++){
-            line = lines[i];
+            var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
                 lines[i]= "a=fmtp:111 minptime=10; ptime=60; useinbandfec=1";
             }
@@ -167,53 +378,40 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
     }
 
 
-    function messageDeal(event){
-        //console.log("message is ", event.data);
-        var data = JSON.parse(event.data);
-        console.log("message data is ", data);
-        if (data.to != mid){
-            alert("message mixup");
-        }
-        switch (data.type) {
-            case "offer":
-                if (fid == null) {
-                    fid = data.from;
-                }
-                if(recorder && initiator){
-                    stopCall();
-                    document.location = document.location;
-                } else {
-                    pc.setRemoteDescription(data).then(_ =>
-                        pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
-                            ans.sdp = tweakSDP(ans.sdp);
-                            pc.setLocalDescription(ans).then(_ =>
-                                sendMessage(fid, mid, "answer", ans.sdp)
-                            )
-                        })
-                    )
-                        .catch((e) => console.log("set Remote offer error", e));
-                }
-                break;
-            case "answer":
-                pc.setRemoteDescription(data)
-                    .then( _ => {
-                    //$("#action").text("hangup");
-                })
-                    .catch(e => console.log("set Remote answer error", e) );
-                break;
-            case "candidate":
-                var jc = {
-                    sdpMLineIndex: 0,
-                    candidate: data.sdp
-                };
-                console.log("adding candidate ", jc);
-                var nc = new RTCIceCandidate(jc);
-                pc.addIceCandidate(nc)
-                    .then( _ => console.log("added remote candidate"))
-                    .catch((e) => console.log("couldn't add candidate ", e));
-                break;
-        }
+function messageDeal(event){
+    //console.log("message is ", event.data);
+    var data = JSON.parse(event.data);
+    console.log("message data is ", data);
+    if (data.to != mid){
+        alert("message mixup");
     }
+    var session = sessions[data.from];
+    switch (data.type) {
+        case "offer":
+            if ((session == null) && (initiator)) {
+                session = new Session(data.from);
+                sessions[data.from] = session;
+            }
+            if (initiator){
+                session.offerDeal(data);
+            } else {
+                console.log("huh? Guests send offers");
+            }
+            break;
+        case "answer":
+            if ((session) && (!initiator)){
+                session.answerDeal(data);
+            }
+            break;
+        case "candidate":
+            if (session) {
+                session.candidateDeal(data);
+            } else {
+                console.log("should stash candidate for "+data.from);
+            }
+            break;
+    }
+}
 
     function sendMessage(to,from,type,data){
         var messageJ = {
@@ -229,11 +427,9 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
     }
 
     // button actions
-
-    function startCall(cid){
-        lcandyStash = [];
-        rcandyStash = [];
-        fid = cid;
+    // this is singular -
+    function startCall(fid){
+        var pc = sessions[cid].pc;
         pc.createOffer(peerConnectionOfferAnswerCriteria)
             .then(desc => {
                 console.log("offer created",);
@@ -243,35 +439,11 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
             })
             .catch(e => console.log("offer not created due to ", e) );
     }
-    function saveData(blob) {
-        var fileName = 'distributedFuture-'+new Date().toISOString() + '.webm';
 
-        console.log("Save data ?");
-        var a = document.createElement("a");
-        document.body.appendChild(a);
-        a.style = "display: none";
-        console.log("saving wav blob as " + fileName);
-        url = window.URL.createObjectURL(blob);
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        saved = true;
-        $("#status").text("Call saved as "+fileName);
-
-    }
 
     function stopCall(){
-        localStream.getAudioTracks()[0].stop();
-        if (initiator) {
-            recorder.stop();
-        } else {
-            clearInterval(recorder);
-        }
-// save file here....
         $("#status").text("Call ended.");
-
-
+        document.location = "thanks.html";
     }
 
 
@@ -300,152 +472,6 @@ websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous se
         var secs = Math.floor((diff % 60000) / 1000);
         $("#duration").text(""+mins+":"+secs);
     }
-    function checkLoss(){
-        pc.getReceivers()[0].getStats().then(
-            function(rs) {
-                rs.forEach( function (d){
-                        if(d.type ==="inbound-rtp"){
-                            var recvd = d.packetsReceived;
-                            var lost = d.packetsLost;
-                            if (lost > lastLoss){
-                                $("#packetLoss").show();
-                                var diffl = lost - lastLoss;
-                                var diffp = recvd -lastRecv;
-                                var pct = Math.ceil(100.0 * diffl /diffp);
-                                $("#countZero").text(""+pct);
-                            } else {
-                                $("#packetLoss").hide();
-                            }
-                            lastLoss = lost;
-                            lastRecv = recvd;
-                        }
-                        if ((d.type ==="candidate-pair")&&(d.nominated)){
-                            $("#delay").text(""+d.currentRoundTripTime);
-                        }
-                        if (d.type === "remote-candidate"){
-                            $("#remote").text(d.candidateType);
-                        }
-                        if (d.type === "local-candidate"){
-                            $("#local").text(d.candidateType);
-                        }
-                    }
-                )
-            });
-    }
-
-    // called when webRTC presents us with a fresh remote audio stream
-    function addStream(stream,kind) {
-        if (!kind) {
-            kind = "audio/video";
-        }
-        $("#status").text("Call connected.");
-
-        console.log("got new stream" + stream + " kind =" + kind);
-        if (kind.indexOf("audio")!= -1) {
-            document.getElementById("them").srcObject = stream;
-            var peer = myac.createMediaStreamSource(stream);
-            if (initiator) {
-                let splityou = myac.createChannelSplitter(2); // 2 outputs L and R
-                peer.connect(splityou);
-                splityou.connect(join,1,1);
-
-                // join already connected to dcomp
-                var recStream = myac.createMediaStreamDestination();
-                recorder = new MediaRecorder(recStream.stream);
-                dcomp.connect(recStream);
-                recorder.ondataavailable = function(evt) {
-                    chunks.push(evt.data);
-                    repaintDuration();
-                };
-                recorder.onstop = function(evt) {
-                    // Make blob out of our blobs, and open it.
-                    var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-                    saveData(blob)
-                };
-                stream.onremovetrack = function(event) {
-                    console.log( "Removed track : " + event.track.kind + ": " + event.track.label);
-                };
-                recorder.start(10000);
-            } else {
-                recorder = window.setInterval(repaintDuration,10000);
-            }
-            window.setInterval(checkLoss,1000);
-
-            startRecTime = Date.now();
-
-            // audio together here.
-            // depends on role
-            console.log('Audio sample Rate is '+ myac.sampleRate);
-            $("#chosenAction").show();
-            $("#statsZone").show();
-        }
-    }
-
-    // configure local peerconnection and handlers
-    function setupRTC(){
-        pc = new RTCPeerConnection(webRTCconfiguration, null);
-        console.log("created peer connection");
-
-        pc.onicecandidate = (e) => {
-            console.log("local ice candidate", e.candidate);
-            if (e.candidate != null) {
-                if (pc.signalingState == 'stable') {
-                    sendMessage(fid, mid, "candidate", e.candidate.candidate);
-                } else {
-                    console.log("stashing ice candidate");
-                    lcandyStash.push(e.candidate);
-                }
-            }
-        };
-        pc.oniceconnectionstatechange = (e) => {
-            console.log("ice state is changed", pc.iceConnectionState);
-            /*
-             "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
-             "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
-             "connected"	A usable pairing of local and remote candidates has been found for all components of the connection, and the connection has been established. It's possible that gathering is still underway, and it's also possible that the ICE agent is still checking candidates against one another looking for a better connection to use.
-             "completed"	The ICE agent has finished gathering candidates, has checked all pairs against one another, and has found a connection for all components.
-             "failed"	The ICE candidate has checked all candidates pairs against one another and has failed to find compatible matches for all components of the connection. It is, however, possible that the ICE agent did find compatible connections for some components.
-             "disconnected"	Checks to ensure that components are still connected failed for at least one component of the RTCPeerConnection. This is a less stringent test than "failed" and may trigger intermittently and resolve just as spontaneously on less reliable networks, or during temporary disconnections. When the problem resolves, the connection may return to the "connected" state.
-             "closed"
-             */
-            if (pc.iceConnectionState === "failed"){
-                stopCall();
-            }
-        };
-        // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
-        if ('ontrack' in pc) {
-            // if so we use it
-            pc.ontrack = (event) => {
-                var stream = event.streams[0];
-                console.log("got remote track ", event.track.kind);
-                addStream(stream,event.track.kind);
-            };
-        } else {
-            // if not we use add stream instead
-            pc.onaddstream = (event) => {
-                var stream = event.stream;
-                console.log("got remote stream ", stream.kind);
-                addStream(stream);
-            }
-        }
-
-        // use this to determine the state of the 'hangup' button and send any candidates we found quickly
-        pc.onsignalingstatechange = (evt) => {
-            console.log("signalling state is ", pc.signalingState);
-            if (pc.signalingState == 'stable') {
-                var can;
-                while (can = lcandyStash.pop()) {
-                    console.log("popping candidate off stash")
-                    sendMessage(fid, mid, "candidate", can.candidate);
-                }
-                var act = $("#stopCall");
-                act.click( _ => stopCall() );
-                window.onbeforeunload = function() {
-                    return !saved ? "If you leave this page you will end the interview." : null;
-                }
-            }
-        };
-    }
 
 
     // plumb the local audio together.
@@ -454,29 +480,38 @@ function setupAudio() {
     myac = new AudioContext();
     setNoSleep();
     dcomp = myac.createDynamicsCompressor();
-
     var gumConstraints = {audio: true, video: false};
+
+    // connect to our speakers
+    if (initiator){
+        localdcomp = myac.createDynamicsCompressor();
+        var dests= myac.createMediaStreamDestination();
+        localdcomp.connect(dests);
+        document.getElementById("them").srcObject = dests.stream;
+    }
 
     var promise = new Promise(function (resolve, reject) {
         navigator.mediaDevices.getUserMedia(gumConstraints)
             .then((stream) => {
                 localStream = stream;
+                // do magic pan stuff here....
                 if (initiator) {
-                    let node = myac.createMediaStreamSource(stream);
-                    let splitme = myac.createChannelSplitter(2); // 2 outputs L and R
-                    join = myac.createChannelMerger(2); // nominally 2 inputs L and R
-                    node.connect(splitme);
-                    splitme.connect(join,0,0)
-                    join.connect(dcomp);
-                }
-                if (pc.addTrack) {
-                    stream.getTracks().forEach(track => {
-                        pc.addTrack(track, stream);
-                        console.log("added local track ", track.id, track.kind);
-                    });
+                    var localsrc = myac.createMediaStreamSource(stream);
+                    localpanned = myac.createStereoPanner();
+                    localpanned.pan.value = 0.0;
+                    console.log("local stream panned to 0.0 ");
+                    localsrc.connect(localpanned);
                 } else {
-                    pc.addStream(stream);
-                    console.log("added local stream");
+                    var pc = sessions[cid].pc; // implicit detection of us being a guest
+                    if (pc.addTrack) {
+                        stream.getTracks().forEach(track => {
+                            pc.addTrack(track, stream);
+                            console.log("added local track ", track.id, track.kind);
+                        });
+                    } else {
+                        pc.addStream(stream);
+                        console.log("added local stream");
+                    }
                 }
                 resolve(false);
             })
@@ -489,13 +524,20 @@ function setupAudio() {
 
 }
 
+function setupRTC(){
+        if (!initiator) {
+            var session = new Session(cid);
+            session.setupRTC();
+            sessions[cid] = session;
+        }
+}
 
 
 function shared() {
     setupRTC();
     setupAudio().then(_ => {
         console.log("ready for offer");
-        $("#status").text("Waiting for guest.");
+        $("#status").text("Waiting for guests.");
     });
 }
 function accepted() {
@@ -513,8 +555,8 @@ function accepted() {
 // change their mind, if their circumstances have changed since the invite was sent.
 
     function setRole() {
-        cid = $.getUrlVar("podcastId");
-        mid = localStorage['podcastId'];
+        cid = $.getUrlVar("clubId");
+        mid = localStorage['clubId'];
         //var act = $("#action");
         if (!mid) {
             var array = new Uint32Array(8);
@@ -532,29 +574,22 @@ function accepted() {
             }
             mid = hexCodes.join("").toLowerCase();
             console.log("mid =", mid);
-            localStorage['podcastId'] = mid;
+            localStorage['clubId'] = mid;
         }
         if (cid == null){
-            document.location = location.pathname + "?" + "podcastId=" + mid ;
+            document.location = location.pathname + "?" + "clubId=" + mid ;
             // this has the effect of getting our id into the browser bar -
             // making it easy to share etc.
         } else {
-            var qrcode = new QRCode(document.getElementById("shareQR"), {
-                width: 280,
-                height: 280,
-                correctLevel: QRCode.CorrectLevel.L
-            });
             socket = new WebSocket( properties.websocketURL + mid);
             socket.onmessage = messageDeal;
             socket.onopen = (_) => {
                 var url = document.location.href;
                 console.log("href = "+url);
-                if (url) {
-                    qrcode.makeCode(url);
-                }
+
                 initiator = (mid === cid);
                 var smodal;
-                if (initiator && !window.MediaRecorder) {
+                if (initiator && !("StereoPannerNode" in window)) {
                     smodal ="#nomediaapi";
                 } else {
                     $("#role").text(initiator ? "Host" : "Guest");
@@ -630,7 +665,7 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#chosenAction").hide();
         $("#packetLoss").hide();
         $("#statsZone").hide();
-        if (window.RTCPeerConnection){
+        if ('RTCPeerConnection' in window ){
             $("#mute").click(_ => setMute(!mute));
             setRole();
         } else {
