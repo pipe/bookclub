@@ -487,10 +487,12 @@ function setupAudio() {
     // connect to our speakers
     if (initiator){
         localdcomp = myac.createDynamicsCompressor();
-        var dests= myac.destination;//myac.createMediaStreamDestination();
+        var dests= myac.createMediaStreamDestination();
         localdcomp.connect(dests);
-
-        //document.getElementById("them").srcObject = dests.stream;
+        // set up play....
+        console.log("local dcomp connected ");
+        document.getElementById("them").srcObject = dests.stream;
+        document.getElementById("them").play();
     }
 
     var promise = new Promise(function (resolve, reject) {
