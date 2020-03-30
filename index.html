@@ -109,7 +109,7 @@
         </div>
     </div>
 </div>
-<audio id="them" style="display: none" > </audio>
+<audio id="them" style="display: none" autoplay > </audio>
 <video id="nosleep" width="100" playsinline muted>
     Antisleep video.
 </video>
@@ -145,11 +145,8 @@ var initiator;
 var localStream;
 var localdcomp;
 var localpanned;
+var isChrome = true; // for now...
 
-var lastLoss = 0;
-var lastRecv =0;
-var softstereo = false;
-var join;
 
 
 var mute = false;
@@ -159,6 +156,8 @@ var sessions = {};
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8];
 
 function Session(id) {
+    this.lastLoss = 0;
+    this.lastRecv =0;
     this.pan = pans.pop();
     this.fid = id;
     this.pc = new RTCPeerConnection(webRTCconfiguration[initiator?"host":"guest"], null);
@@ -195,12 +194,16 @@ Session.prototype.candidateDeal = function(data){
         .then( _ => console.log("added remote candidate"))
         .catch((e) => console.log("couldn't add candidate ", e));
 };
+Session.prototype.stopSession = function() {
+    console.log("removing "+this.id);
 
+    delete sessions[this.id];
+};
 Session.prototype.setupRTC = function(){
         this.pc.onicecandidate = (e) => {
             console.log("local ice candidate", e.candidate);
-            if (e.candidate.candidate.indexOf("TCP") == -1) {
-                if (e.candidate != null) {
+            if (e.candidate != null) {
+                if (e.candidate.candidate.indexOf("TCP") == -1) {
                     if (this.pc.signalingState == 'stable') {
                         sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
                     } else {
@@ -222,7 +225,7 @@ Session.prototype.setupRTC = function(){
              "closed"
              */
             if (this.pc.iceConnectionState === "failed"){
-                stopCall();
+                this.stopSession();
             }
         };
         // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
@@ -270,6 +273,7 @@ Session.prototype.addStream = function(stream,kind) {
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
             // inbound....
+
             var peerin = myac.createMediaStreamSource(stream);
             this.panned = myac.createStereoPanner();
             this.panned.pan.value = this.pan;
@@ -278,7 +282,11 @@ Session.prototype.addStream = function(stream,kind) {
 
             // now connect panned to :
             // local destination...
-            this.panned.connect(localdcomp);
+            if (isChrome){
+                document.getElementById("them").srcObject = stream;
+            } else {
+                this.panned.connect(localdcomp);
+            }
             var that = this;
 
             // outbound
@@ -296,21 +304,24 @@ Session.prototype.addStream = function(stream,kind) {
                     var session = sessionkva[1];
                     that.panned.connect(session.dcomp); // they hear me
                     session.panned.connect(that.dcomp); // I hear them
+                } else {
+                    console.log("skip me "+id);
                 }
+
             });
 
 
             var peerout = myac.createMediaStreamDestination();
             this.dcomp.connect(peerout);
             var pc = this.pc;
-            var stream = peerout.stream;
+            var pstream = peerout.stream;
             if (pc.addTrack) {
-                stream.getTracks().forEach(track => {
-                    pc.addTrack(track, stream);
+                pstream.getTracks().forEach(track => {
+                    pc.addTrack(track, pstream);
                     console.log("added panned outbound track ", track.id, track.kind);
                 });
             } else {
-                pc.addStream(stream);
+                pc.addStream(pstream);
                 console.log("added panned outbound stream");
             }
         } else {
@@ -338,17 +349,17 @@ Session.prototype.checkLoss = function(){
                     if(d.type ==="inbound-rtp"){
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
-                        if (lost > lastLoss){
+                        if (lost > this.lastLoss){
                             $("#packetLoss").show();
-                            var diffl = lost - lastLoss;
-                            var diffp = recvd -lastRecv;
+                            var diffl = lost - this.lastLoss;
+                            var diffp = recvd -this.lastRecv;
                             var pct = Math.ceil(100.0 * diffl /diffp);
                             $("#countZero").text(""+pct);
                         } else {
                             $("#packetLoss").hide();
                         }
-                        lastLoss = lost;
-                        lastRecv = recvd;
+                        this.lastLoss = lost;
+                        this.lastRecv = recvd;
                     }
                     if ((d.type ==="candidate-pair")&&(d.nominated)){
                         $("#delay").text(""+d.currentRoundTripTime);
@@ -374,7 +385,7 @@ Session.prototype.checkLoss = function(){
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=10; ptime=60; useinbandfec=1";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
             }
         }
         return (lines.join("\r\n"));
@@ -486,12 +497,14 @@ function setupAudio() {
 
     // connect to our speakers
     if (initiator){
-        localdcomp = myac.createDynamicsCompressor();
-        var dests= myac.createMediaStreamDestination();
-        localdcomp.connect(dests);
-        // set up play....
-        console.log("local dcomp connected ");
-        document.getElementById("them").srcObject = dests.stream;
+        if (!isChrome) {
+            localdcomp = myac.createDynamicsCompressor();
+            var dests = myac.createMediaStreamDestination();
+            localdcomp.connect(dests);
+            // set up play....
+            console.log("local dcomp connected ");
+            document.getElementById("them").srcObject = dests.stream;
+        }
         document.getElementById("them").play();
     }
 
