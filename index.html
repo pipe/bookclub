@@ -109,8 +109,22 @@
         </div>
     </div>
 </div>
+<div id="fhp"></div>
+<div id="remotes" class="container-fluid">
+    <div class="row" class="container-fluid">
+        <div class="col" id="-0.8"></div>
+        <div class="col" id="-0.6"></div>
+        <div class="col" id="-0.4"></div>
+        <div class="col" id="-0.2"></div>
+        <div class="col" id="0"></div>
+        <div class="col" id="0.2"></div>
+        <div class="col" id="0.4"></div>
+        <div class="col" id="0.6"></div>
+        <div class="col"id="0.8"></div>
+    </div>
+</div>
 <audio id="them" style="display: none" autoplay > </audio>
-<video id="nosleep" width="100" playsinline muted>
+<video id="nosleep" width="1" playsinline muted>
     Antisleep video.
 </video>
 <script>
@@ -153,18 +167,34 @@ var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
-var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8];
+var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8, 0.0];
 
-function Session(id) {
+function Session(id,lpan) {
+    this.checker = null;
     this.lastLoss = 0;
     this.lastRecv =0;
-    this.pan = pans.pop();
     this.fid = id;
-    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator?"host":"guest"], null);
-    this.setupRTC();
-    console.log("created peer connection for "+id);
-    console.log("pan is "+this.pan);
-    this.lcandyStash = [];
+    this.panned = null;
+    this.dcomp = null;
+    this.statusChannel = null;
+    if (!lpan) {
+        this.pan = pans.pop();
+        this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
+        this.setupRTC();
+        console.log("created peer connection for " + id);
+        console.log("pan is " + this.pan);
+        this.lcandyStash = [];
+    } else {
+        this.pc = null;
+        this.pan = lpan;
+        console.log("dummy entry for " + id);
+    }
+    this.rdiv = document.createElement("div");
+    var remoteslot = document.getElementById(""+this.pan);
+    var img = document.createElement("img");
+    img.setAttribute("src","https://robohash.org/"+this.fid+"?size=80x80");
+    this.rdiv.appendChild(img);
+    remoteslot.appendChild(this.rdiv);
 }
 Session.prototype.offerDeal = function (data) {
     this.pc.setRemoteDescription(data).then(_ =>
@@ -195,9 +225,44 @@ Session.prototype.candidateDeal = function(data){
         .catch((e) => console.log("couldn't add candidate ", e));
 };
 Session.prototype.stopSession = function() {
-    console.log("removing "+this.id);
-
-    delete sessions[this.id];
+    console.log("removing " + this.fid);
+    if (this.panned != null) {
+        this.panned.disconnect();
+        this.panned = null;
+        pans.push(this.pan);
+    }
+    if (this.dcomp != null) {
+        this.dcomp.disconnect();
+        this.dcomp = null;
+    }
+    if (this.checker != null) {
+        window.clearTimeout(this.checker);
+        this.checker  = null;
+    }
+    var that = this;
+    if (initiator) {
+        Object.entries(sessions).forEach(sessionkva => {
+            var id = sessionkva[0];
+            if (id != this.fid) {
+                var session = sessionkva[1];
+                if (session.statusChannel.readyState == 'open') {
+                    session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
+                }
+            } else {
+                console.log("skip me " + id);
+            }
+        });
+    }
+    if(this.pc != null){
+        var mpc = this.pc;
+        window.setTimeout(function () {mpc.close();},5000);
+        this.pc = null;
+    }
+    if (this.rdiv) {
+        var remotes = this.rdiv.parentNode;
+        remotes.removeChild(this.rdiv);
+    }
+    delete sessions[this.fid];
 };
 Session.prototype.setupRTC = function(){
         this.pc.onicecandidate = (e) => {
@@ -227,6 +292,9 @@ Session.prototype.setupRTC = function(){
             if (this.pc.iceConnectionState === "failed"){
                 this.stopSession();
             }
+            if (this.pc.iceConnectionState === "disconnected"){
+                this.stopSession();
+            }
         };
         // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
         if ('ontrack' in this.pc) {
@@ -247,18 +315,40 @@ Session.prototype.setupRTC = function(){
 
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
         this.pc.onsignalingstatechange = (evt) => {
-            console.log("signalling state is ", this.pc.signalingState);
-            if (this.pc.signalingState == 'stable') {
-                var can;
-                while (can = this.lcandyStash.pop()) {
-                    console.log("popping candidate off stash")
-                    sendMessage(this.fid, mid, "candidate", can.candidate);
+            if (this.pc != null) {
+                console.log("signalling state is ", this.pc.signalingState);
+                if (this.pc.signalingState == 'stable') {
+                    var can;
+                    while (can = this.lcandyStash.pop()) {
+                        console.log("popping candidate off stash");
+                        sendMessage(this.fid, mid, "candidate", can.candidate);
+                    }
+                    var act = $("#stopCall");
+                    act.click(_ => stopCall());
+                    window.onbeforeunload = function () {
+                        return this.pc!=null ? "If you leave this page you will end the connection." : null;
+                    }
                 }
-                var act = $("#stopCall");
-                act.click( _ => stopCall() );
-                window.onbeforeunload = function() {
-                    return !saved ? "If you leave this page you will end the interview." : null;
-                }
+            }
+        };
+        this.pc.ondatachannel = (evt) => {
+            console.log("got new datachannel from " +this.fid);
+            this.statusChannel = evt.channel;
+            this.statusChannel.onopen = (ev) => {
+                console.log("got open datachannel from " +this.fid);
+                var that = this;
+                Object.entries(sessions).forEach(sessionkva => {
+                    var id = sessionkva[0];
+                    if (id != this.fid) {
+                        var session = sessionkva[1];
+                        that.statusChannel.send(JSON.stringify({act: 'add', fid: session.fid, pan: session.pan})); // they hear me
+                        if ((session.statusChannel) && (session.statusChannel.readyState=='open')) {
+                            session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan})); // I hear them
+                        }
+                    } else {
+                        console.log("skip me " + id);
+                    }
+                });
             }
         };
 
@@ -267,8 +357,7 @@ Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
         kind = "audio/video";
     }
-    $("#status").text("Call connected to "+this.fid);
-
+    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
     console.log("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
@@ -331,7 +420,7 @@ Session.prototype.addStream = function(stream,kind) {
             them.play();
         }
         var that = this;
-        window.setInterval(function() {that.checkLoss();},1000);
+        this.checker = window.setInterval(function() {that.checkLoss();},1000);
 
 
         // audio together here.
@@ -443,7 +532,14 @@ function messageDeal(event){
     // button actions
     // this is singular -
     function startCall(fid){
-        var pc = sessions[cid].pc;
+        var that = sessions[cid];
+        var pc = that.pc;
+
+        that.statusChannel = pc.createDataChannel("status");
+        console.log("created status datachannel");
+        that.statusChannel.onmessage = function (evt){
+            statusDeal(evt);
+        };
         pc.createOffer(peerConnectionOfferAnswerCriteria)
             .then(desc => {
                 console.log("offer created",);
@@ -460,7 +556,28 @@ function messageDeal(event){
         document.location = "thanks.html";
     }
 
+    function statusDeal(evt){
+        console.log("got message "+evt.data);
+        var mo = JSON.parse(evt.data);
+        if (mo.act){
+            if (mo.act =="add"){
+                var sess = new Session(mo.fid,mo.pan);
+                console.log("adding user "+mo.fid);
+                sessions[mo.fid]= sess;
+            }
+            if (mo.act =="del"){
+                console.log("delete user "+mo.fid);
+                var sess = sessions[mo.fid]
+                if (sess){
+                    sess.stopSession();
+                }
+            }
+        } else {
+            console.log("missing action");
+        }
+        $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 
+    }
 
     // mute management
     function setMute(m){
@@ -606,6 +723,7 @@ function accepted() {
                 console.log("href = "+url);
 
                 initiator = (mid === cid);
+                if (initiator){ pans.pop(); }
                 var smodal;
                 if (initiator && !("StereoPannerNode" in window)) {
                     smodal ="#nomediaapi";
