@@ -255,7 +255,13 @@ Session.prototype.stopSession = function() {
     }
     if(this.pc != null){
         var mpc = this.pc;
-        window.setTimeout(function () {mpc.close();},5000);
+        window.setTimeout(function () {
+            if (initiator) {
+                mpc.close();
+            } else {
+                stopCall(); // that is if we killed the (only) pc then byebye
+            }
+        },5000);
         this.pc = null;
     }
     if (this.rdiv) {
