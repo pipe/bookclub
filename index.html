@@ -123,10 +123,10 @@
         <div class="col"id="0.8"></div>
     </div>
 </div>
-<audio id="them" style="display: none" autoplay > </audio>
-<video id="nosleep" width="1" playsinline muted>
+<audio id="them" style="display: none" autoplay muted> </audio>
+<!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
-</video>
+</video-->
 <script>
 var properties = {
 websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
@@ -159,10 +159,6 @@ var initiator;
 var localStream;
 var localdcomp;
 var localpanned;
-var isChrome = true; // for now...
-
-
-
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -176,19 +172,21 @@ function Session(id,lpan) {
     this.fid = id;
     this.panned = null;
     this.dcomp = null;
+    this.peerout = null;
+    this.peerin = null;
     this.statusChannel = null;
     if (!lpan) {
         this.pan = pans.pop();
         this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
         this.setupRTC();
         console.log("created peer connection for " + id);
-        console.log("pan is " + this.pan);
         this.lcandyStash = [];
     } else {
         this.pc = null;
         this.pan = lpan;
-        console.log("dummy entry for " + id);
+        console.log("dummy entry for " + id );
     }
+    console.log("pan is " + this.pan);
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
     var img = document.createElement("img");
@@ -226,8 +224,24 @@ Session.prototype.candidateDeal = function(data){
 };
 Session.prototype.stopSession = function() {
     console.log("removing " + this.fid);
+    delete sessions[this.fid];
+
+    var that = this;
+    if (initiator) {
+        Object.entries(sessions).forEach(sessionkva => {
+                var session = sessionkva[1];
+                session.panned.disconnect(that.dcomp);
+                that.panned.disconnect(session.dcomp);
+                if (session.statusChannel.readyState == 'open') {
+                    session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
+                }
+        });
+    }
+    if (localpanned){
+        localpanned.disconnect(this.dcomp);
+    }
     if (this.panned != null) {
-        this.panned.disconnect();
+        this.panned.disconnect(localdcomp);
         this.panned = null;
         pans.push(this.pan);
     }
@@ -235,23 +249,17 @@ Session.prototype.stopSession = function() {
         this.dcomp.disconnect();
         this.dcomp = null;
     }
+    if (this.peerout != null) {
+        this.peerout.disconnect();
+        this.peerout = null;
+    }
+    if (this.peerin != null){
+        this.peerin.disconnect();
+        this.peerin = null;
+    }
     if (this.checker != null) {
         window.clearTimeout(this.checker);
         this.checker  = null;
-    }
-    var that = this;
-    if (initiator) {
-        Object.entries(sessions).forEach(sessionkva => {
-            var id = sessionkva[0];
-            if (id != this.fid) {
-                var session = sessionkva[1];
-                if (session.statusChannel.readyState == 'open') {
-                    session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
-                }
-            } else {
-                console.log("skip me " + id);
-            }
-        });
     }
     if(this.pc != null){
         var mpc = this.pc;
@@ -268,7 +276,7 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    delete sessions[this.fid];
+    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
         this.pc.onicecandidate = (e) => {
@@ -368,20 +376,19 @@ Session.prototype.addStream = function(stream,kind) {
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
             // inbound....
-
-            var peerin = myac.createMediaStreamSource(stream);
+            this.peerin = myac.createMediaStreamSource(stream);
             this.panned = myac.createStereoPanner();
             this.panned.pan.value = this.pan;
             console.log("panned to "+this.pan);
-            peerin.connect(this.panned);
+            this.peerin.connect(this.panned);
 
             // now connect panned to :
             // local destination...
-            if (isChrome){
-                document.getElementById("them").srcObject = stream;
-            } else {
-                this.panned.connect(localdcomp);
-            }
+            //if (isChrome){
+            //    document.getElementById("them").srcObject = stream;
+            //} else {
+            this.panned.connect(localdcomp);
+            //}
             var that = this;
 
             // outbound
@@ -395,7 +402,7 @@ Session.prototype.addStream = function(stream,kind) {
 
             Object.entries(sessions).forEach(sessionkva => {
                 var id = sessionkva[0];
-                if (id != this.id) {
+                if (id != this.fid) {
                     var session = sessionkva[1];
                     that.panned.connect(session.dcomp); // they hear me
                     session.panned.connect(that.dcomp); // I hear them
@@ -406,10 +413,10 @@ Session.prototype.addStream = function(stream,kind) {
             });
 
 
-            var peerout = myac.createMediaStreamDestination();
-            this.dcomp.connect(peerout);
+            this.peerout = myac.createMediaStreamDestination();
+            this.dcomp.connect(this.peerout);
             var pc = this.pc;
-            var pstream = peerout.stream;
+            var pstream = this.peerout.stream;
             if (pc.addTrack) {
                 pstream.getTracks().forEach(track => {
                     pc.addTrack(track, pstream);
@@ -423,7 +430,7 @@ Session.prototype.addStream = function(stream,kind) {
             startRecTime = Date.now();
             console.log("added remote stream to audiotag");
             document.getElementById("them").srcObject = stream;
-            them.play();
+            document.getElementById("them").play();
         }
         var that = this;
         this.checker = window.setInterval(function() {that.checkLoss();},1000);
@@ -615,20 +622,19 @@ function messageDeal(event){
 function setupAudio() {
 
     myac = new AudioContext();
-    setNoSleep();
+    //setNoSleep();
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
     if (initiator){
-        if (!isChrome) {
-            localdcomp = myac.createDynamicsCompressor();
-            var dests = myac.createMediaStreamDestination();
-            localdcomp.connect(dests);
-            // set up play....
-            console.log("local dcomp connected ");
-            document.getElementById("them").srcObject = dests.stream;
-        }
-        document.getElementById("them").play();
+
+        localdcomp = myac.createDynamicsCompressor();
+        var dests = myac.destination; //myac.createMediaStreamDestination();
+        localdcomp.connect(dests);
+        // set up play....
+        //console.log("local dcomp connected ");
+//        document.getElementById("them").srcObject = dests.stream;
+//        document.getElementById("them").play();
     }
 
     var promise = new Promise(function (resolve, reject) {
@@ -813,8 +819,6 @@ function _addSourceToVideo(element, type, dataURI) {
         } else {
             $('#nowebrtc').modal('show');
         }
-
-
     });
 </script>
 </body>
