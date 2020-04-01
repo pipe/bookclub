@@ -11,6 +11,18 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <style>
+        body {
+            background-image: url("fhp2.jpeg");
+            background-color: #cccccc;
+        }
+        .footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            color: white;
+            text-align: center;
+        }
     </style>
 
 </head>
@@ -27,19 +39,10 @@
     <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
 </div>
 <div class="container">
-        <div id="chosenAction" class="row">
-            <button id="mute" type="button" class="btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
-            <button id="stopCall" type="button" class="btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
+        <div id="chosenAction" class="row justify-content-around">
+            <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
+            <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
         </div>
-    <div>Duration <span class="badge badge-error" id="duration"></span></div>
-    <div class="alert alert-danger" id="packetLoss">
-        <strong id="countZero"></strong>% packet loss detected.
-    </div>
-    <div class="alert alert-info" id="statsZone">
-        local <strong id="local"></strong><br/>
-        <strong id="delay"></strong> sec delay<br/>
-        remote <strong id="remote"></strong><br/>
-    </div>
 </div>
 
 <div id="share" class="modal" tabindex="-1" role="dialog">
@@ -109,9 +112,11 @@
         </div>
     </div>
 </div>
-<div id="fhp"></div>
-<div id="remotes" class="container-fluid">
-    <div class="row" class="container-fluid">
+<!--div id="fhp" class="container-fluid">
+    <img src="fhp2.jpeg" class="img-fluid"/>
+</div-->
+<div id="remotes" class="container-fluid footer" >
+    <div class="row no-gutters" >
         <div class="col" id="-0.8"></div>
         <div class="col" id="-0.6"></div>
         <div class="col" id="-0.4"></div>
@@ -120,7 +125,7 @@
         <div class="col" id="0.2"></div>
         <div class="col" id="0.4"></div>
         <div class="col" id="0.6"></div>
-        <div class="col"id="0.8"></div>
+        <div class="col" id="0.8"></div>
     </div>
 </div>
 <audio id="them" style="display: none" autoplay > </audio>
@@ -195,6 +200,7 @@ function Session(id,lpan) {
     var remoteslot = document.getElementById(""+this.pan);
     var img = document.createElement("img");
     img.setAttribute("src","https://robohash.org/"+this.fid+"?size=80x80");
+    img.setAttribute("class","img-fluid");
     this.rdiv.appendChild(img);
     if (initiator && isChrome) {
         // add an audio tag per recipient
@@ -462,25 +468,28 @@ Session.prototype.addStream = function(stream,kind) {
 };
 
 Session.prototype.checkLoss = function(){
+    var that = this;
     this.pc.getReceivers()[0].getStats().then(
         function(rs) {
             rs.forEach( function (d){
                     if(d.type ==="inbound-rtp"){
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
+                        var colour = "grey";
                         if (lost > this.lastLoss){
-                            $("#packetLoss").show();
                             var diffl = lost - this.lastLoss;
                             var diffp = recvd -this.lastRecv;
                             var pct = Math.ceil(100.0 * diffl /diffp);
-                            $("#countZero").text(""+pct);
-                        } else {
-                            $("#packetLoss").hide();
+                            if ( pct > 0){
+                                colour = rgb(128+pct,128,128);
+                            }
                         }
                         this.lastLoss = lost;
                         this.lastRecv = recvd;
+                        that.rdiv.setAttribute("style","background-color:"+colour+";");
+
                     }
-                    if ((d.type ==="candidate-pair")&&(d.nominated)){
+                    /*if ((d.type ==="candidate-pair")&&(d.nominated)){
                         $("#delay").text(""+d.currentRoundTripTime);
                     }
                     if (d.type === "remote-candidate"){
@@ -488,14 +497,19 @@ Session.prototype.checkLoss = function(){
                     }
                     if (d.type === "local-candidate"){
                         $("#local").text(d.candidateType);
-                    }
+                    }*/
                 }
             )
         });
 }
 
 
-
+function rgb(r, g, b){
+    r = Math.floor(r);
+    g = Math.floor(g);
+    b = Math.floor(b);
+    return ["rgb(",r,",",g,",",b,")"].join("");
+}
 
     // message stuff - used to create direct connection to peer over WEBRTC
 
@@ -625,7 +639,7 @@ function messageDeal(event){
             audioTracks[0].enabled = !m;
         }
     }
-
+/*
     function repaintDuration(){
         var diff = Date.now() - startRecTime;
         console.log ("data on at "+diff);
@@ -633,7 +647,7 @@ function messageDeal(event){
         var secs = Math.floor((diff % 60000) / 1000);
         $("#duration").text(""+mins+":"+secs);
     }
-
+*/
 
     // plumb the local audio together.
 function setupAudio() {

@@ -1,10 +1,10 @@
 # Bookclub - a remote bookclub app.
 
-# THIS IS A WISH LIST - THIS APP DOES NONE OF THESE THINGS _YET_
+# Alpha quality - but it does work. 
 
 ## Features
 1) Simple - send a link your members, they open it on their smartphone
-2) Everyone hears everyone else - spread in a stereo space.
+2) Everyone hears everyone else - spread in a stereo space (where supported)
 3) FREE + opensource
 4) Audio quality is better than PSTN, skype, Zoom etc 
 5) All done in the browser no app to download or install for your guest - or you
@@ -12,14 +12,15 @@
 ### NOTE - This is BETA quality software, it might break, lose your recordings, frighten your cat etc...
 
 ## Requirements
-### Host needs to use Chrome (on a laptop or Android).
+### Host needs to use Firefox or Chrome on a laptop ( or Android?).
 ### The host needs more compute resources than the members (TBD)
-### The guest can use Safari on iOS or Chrome on Android
+### The guest can use Safari on iOS or Chrome on Android or Edge on Windows
+### Everyone should use headphones if they possibly can
 
 ## How to use it as a Host
 
-1) Make a an appointment with the guest.
-2) Just before the interview, browse to https://pipe.github.io/bookcclub/ 
+1) Publicise a meeting time to your group
+2) Just before the meeting, browse to https://pipe.github.io/bookclub/ 
 this creates a link, 
 3) share the link with your members 
 you can use email, twitter DMs , SMS whatever works for you and your members
