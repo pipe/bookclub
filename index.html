@@ -163,6 +163,9 @@ var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
+var isChrome = ("chrome" in window);
+// really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
+
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8, 0.0];
 
 function Session(id,lpan) {
@@ -175,6 +178,7 @@ function Session(id,lpan) {
     this.peerout = null;
     this.peerin = null;
     this.statusChannel = null;
+    this.audio = null;
     if (!lpan) {
         this.pan = pans.pop();
         this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
@@ -192,6 +196,12 @@ function Session(id,lpan) {
     var img = document.createElement("img");
     img.setAttribute("src","https://robohash.org/"+this.fid+"?size=80x80");
     this.rdiv.appendChild(img);
+    if (initiator && isChrome) {
+        // add an audio tag per recipient
+        this.audio = document.createElement("audio");
+        this.audio.setAttribute("style","display: none;");
+        this.rdiv.appendChild(this.audio);
+    }
     remoteslot.appendChild(this.rdiv);
 }
 Session.prototype.offerDeal = function (data) {
@@ -384,13 +394,16 @@ Session.prototype.addStream = function(stream,kind) {
 
             // now connect panned to :
             // local destination...
-            //if (isChrome){
-            //    document.getElementById("them").srcObject = stream;
-            //} else {
-            if (localdcomp != null) {
-                this.panned.connect(localdcomp);
+            if (this.audio != null){
+                this.audio.srcObject = stream;
+                this.audio.play();
+            } else {
+                if (localdcomp != null) {
+                    this.panned.connect(localdcomp);
+                } else {
+                    console.log("nowhere to plug "+this.fid);
+                }
             }
-            //}
             var that = this;
 
             // outbound
@@ -629,7 +642,9 @@ function setupAudio() {
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
-    if (initiator){
+    if ((initiator) && (!isChrome)){
+        // this works beautifully on firefox but fails in chrome
+        // so as an alternative in chrome we make a _lot_ of audio devices
         localdcomp = myac.createDynamicsCompressor();
         var dests = myac.createMediaStreamDestination();
         localdcomp.connect(dests);
