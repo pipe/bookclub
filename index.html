@@ -428,11 +428,11 @@ Session.prototype.addStream = function(stream,kind) {
                 pc.addStream(pstream);
                 console.log("added panned outbound stream");
             }
-        } // else {
+        }  else {
             startRecTime = Date.now();
             console.log("added remote stream to audiotag");
             document.getElementById("them").srcObject = stream;
-       // }
+        }
         var that = this;
         this.checker = window.setInterval(function() {that.checkLoss();},1000);
 
@@ -623,22 +623,21 @@ function messageDeal(event){
 function setupAudio() {
 
     myac = new AudioContext();
-    document.getElementById("them").play();
+    // document.getElementById("them").play();
 
     //setNoSleep();
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
-//    if (initiator){
-//
-//        localdcomp = myac.createDynamicsCompressor();
-//        var dests = myac.destination; //myac.createMediaStreamDestination();
-//        localdcomp.connect(dests);
+    if (initiator){
+        localdcomp = myac.createDynamicsCompressor();
+        var dests = myac.createMediaStreamDestination();
+        localdcomp.connect(dests);
         // set up play....
         //console.log("local dcomp connected ");
-//        document.getElementById("them").srcObject = dests.stream;
-//        document.getElementById("them").play();
-//    }
+        document.getElementById("them").srcObject = dests.stream;
+        document.getElementById("them").play();
+    }
 
     var promise = new Promise(function (resolve, reject) {
         navigator.mediaDevices.getUserMedia(gumConstraints)
