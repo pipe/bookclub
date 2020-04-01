@@ -124,9 +124,9 @@
     </div>
 </div>
 <audio id="them" style="display: none" autoplay > </audio>
-<!--video id="nosleep" width="1" playsinline muted>
+<video id="nosleep" width="1" playsinline muted>
     Antisleep video.
-</video-->
+</video>
 <script>
 var properties = {
 websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
@@ -639,9 +639,8 @@ function messageDeal(event){
 function setupAudio() {
 
     myac = new AudioContext();
-    // document.getElementById("them").play();
 
-    //setNoSleep();
+    setNoSleep();
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
