@@ -395,6 +395,9 @@ Session.prototype.addStream = function(stream,kind) {
             // now connect panned to :
             // local destination...
             if (this.audio != null){
+                // chrome wont accept webaudio streams into a <audio> object
+                // chrome also only accepts the _last_ webRTC stream into an <audio>
+                // so the hack is to make many of them and connect to one per member
                 this.audio.srcObject = stream;
                 this.audio.play();
             } else {
