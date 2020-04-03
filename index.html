@@ -37,6 +37,7 @@
 <div class="container">
     <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
     <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
+    <h2>Avatar: <img id="me"> </img> </h2>
 </div>
 <div class="container">
         <div id="chosenAction" class="row justify-content-around">
@@ -169,6 +170,7 @@ var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToRece
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
+var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8, 0.0];
@@ -184,6 +186,8 @@ function Session(id,lpan) {
     this.peerin = null;
     this.statusChannel = null;
     this.audio = null;
+    this.img = null;
+    this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
         this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
@@ -198,10 +202,7 @@ function Session(id,lpan) {
     console.log("pan is " + this.pan);
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
-    var img = document.createElement("img");
-    img.setAttribute("src","https://robohash.org/"+this.fid+"?size=80x80");
-    img.setAttribute("class","img-fluid");
-    this.rdiv.appendChild(img);
+
     if (initiator && isChrome) {
         // add an audio tag per recipient
         this.audio = document.createElement("audio");
@@ -209,7 +210,18 @@ function Session(id,lpan) {
         this.rdiv.appendChild(this.audio);
     }
     remoteslot.appendChild(this.rdiv);
-}
+};
+Session.prototype.setImage = function(imageData){
+    console.log("setting session image");
+    this.img = document.createElement("img");
+    this.img.setAttribute("class","img-fluid");
+    this.img.setAttribute("src",imageData);
+    this.rdiv.appendChild(this.img);
+    this.imageData = imageData;
+    if (initiator) {
+        this.tellAll();
+    }
+};
 Session.prototype.offerDeal = function (data) {
     this.pc.setRemoteDescription(data).then(_ =>
         this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
@@ -366,22 +378,39 @@ Session.prototype.setupRTC = function(){
             this.statusChannel = evt.channel;
             this.statusChannel.onopen = (ev) => {
                 console.log("got open datachannel from " +this.fid);
-                var that = this;
-                Object.entries(sessions).forEach(sessionkva => {
-                    var id = sessionkva[0];
-                    if (id != this.fid) {
-                        var session = sessionkva[1];
-                        that.statusChannel.send(JSON.stringify({act: 'add', fid: session.fid, pan: session.pan})); // they hear me
-                        if ((session.statusChannel) && (session.statusChannel.readyState=='open')) {
-                            session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan})); // I hear them
-                        }
-                    } else {
-                        console.log("skip me " + id);
-                    }
+                // tell them about us.
+                myImage.then( (img) => {
+                    that.statusChannel.send(JSON.stringify({act: 'add', fid: cid, pan: "0",img:img}));
                 });
+            };
+            var that = this;
+            this.statusChannel.onmessage = (ev) => {
+                console.log("got data on datachannel from " +that.fid);
+                var mess = JSON.parse(ev.data);
+                if (mess.id == that.fid){
+                    console.log("setting image data");
+                    that.setImage(mess.img);
+                }
             }
-        };
 
+        };
+};
+Session.prototype.tellAll = function() {
+    var that = this;
+    Object.entries(sessions).forEach(sessionkva => {
+        var id = sessionkva[0];
+        var session = sessionkva[1];
+        // tell them about everyone (including themselves)
+        that.statusChannel.send(JSON.stringify({act: 'add', fid: session.fid, pan: session.pan,img:session.imageData}));
+        if (id != this.fid) {
+            // tell everyone (except them) about them 
+            if ((session.statusChannel) && (session.statusChannel.readyState=='open')) {
+                session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan, img: that.imageData})); // I hear them
+            }
+        } else {
+            console.log("skip me " + id);
+        }
+    });
 };
 Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
@@ -580,6 +609,13 @@ function messageDeal(event){
         var pc = that.pc;
 
         that.statusChannel = pc.createDataChannel("status");
+        that.statusChannel.onopen = function(){
+            myImage.then( function (im) {
+                var imageinfo = {id: mid, img: im};
+                console.log("sendimage info over status datachannel "+JSON.stringify(imageinfo));
+                that.statusChannel.send(JSON.stringify(imageinfo));
+            });
+        };
         console.log("created status datachannel");
         that.statusChannel.onmessage = function (evt){
             statusDeal(evt);
@@ -608,6 +644,7 @@ function messageDeal(event){
                 var sess = new Session(mo.fid,mo.pan);
                 console.log("adding user "+mo.fid);
                 sessions[mo.fid]= sess;
+                sess.setImage(mo.img);
             }
             if (mo.act =="del"){
                 console.log("delete user "+mo.fid);
@@ -734,6 +771,49 @@ function accepted() {
 // the initiator then accepts this audio - This allows the initiator the chance to
 // change their mind, if their circumstances have changed since the invite was sent.
 
+    function getRobotImage(){
+        var ret = new Promise(function (resolve, reject) {
+            var robotStorage = localStorage.getItem("robot");
+            if (robotStorage) {
+                resolve(robotStorage);
+            } else {
+                // Create XHR, Blob and FileReader objects
+                var xhr = new XMLHttpRequest(),
+                    blob,
+                    fileReader = new FileReader();
+                xhr.open("GET", "http://robohash.org/"+mid+"?size=80x80", true);
+                // Set the responseType to arraybuffer. "blob" is an option too, rendering manual Blob creation unnecessary, but the support for "blob" is not widespread enough yet
+                xhr.responseType = "arraybuffer";
+
+                xhr.addEventListener("load", function () {
+                    if (xhr.status === 200) {
+                        // Create a blob from the response
+                        blob = new Blob([xhr.response], {type: "image/jpeg"});
+                        // onload needed since Google Chrome doesn't support addEventListener for FileReader
+                        fileReader.onload = function (evt) {
+                            // Read out file contents as a Data URL
+                            var result = evt.target.result;
+                            // Store Data URL in localStorage
+                            try {
+                                localStorage.setItem("robot", result);
+                                resolve(result);
+                            }
+                            catch (e) {
+                                console.log("Storage failed: " + e);
+                                reject(e);
+                            }
+                        };
+                        // Load blob as Data URL
+                        fileReader.readAsDataURL(blob);
+                    }
+                }, false);
+                // Send XHR
+                xhr.send();
+            }
+        });
+        return ret;
+    }
+
     function setRole() {
         cid = $.getUrlVar("clubId");
         mid = localStorage['clubId'];
@@ -778,6 +858,10 @@ function accepted() {
                     smodal = initiator ? "#share" : "#accept";
                 }
                 $(smodal).modal('show');
+                myImage = getRobotImage();
+                myImage.then( (img) => {
+                    document.getElementById("me").src = img;
+                });
             };
             socket.onerror = (e) => {
                 console.log("can't open websocket", e);
@@ -846,7 +930,7 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#chosenAction").hide();
         $("#packetLoss").hide();
         $("#statsZone").hide();
-        if ('RTCPeerConnection' in window ){
+        if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));
             setRole();
         } else {
