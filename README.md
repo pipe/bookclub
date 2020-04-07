@@ -14,7 +14,7 @@
 ## Requirements
 ### Host needs to use Firefox or Chrome on a laptop ( or Android?).
 ### The host needs more compute resources than the members (TBD)
-### The guest can use Safari on iOS or Chrome on Android or Edge on Windows
+### The guest can use Safari on iOS or Chrome on Android (or new chromium based Edge on Windows)
 ### Everyone should use headphones if they possibly can
 
 ## How to use it as a Host
