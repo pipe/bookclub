@@ -174,7 +174,7 @@ var isChrome = ("chrome" in window);
 //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
-var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8, 0.0];
+var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
 
 function Session(id,lpan) {
     this.checker = null;
@@ -258,12 +258,16 @@ Session.prototype.stopSession = function() {
     var that = this;
     if (initiator) {
         Object.entries(sessions).forEach(sessionkva => {
-                var session = sessionkva[1];
+            var session = sessionkva[1];
+            if (that.dcomp && session.panned) {
                 session.panned.disconnect(that.dcomp);
+            }
+            if (that.panned && session.dcomp) {
                 that.panned.disconnect(session.dcomp);
-                if (session.statusChannel.readyState == 'open') {
-                    session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
-                }
+            }
+            if (session.statusChannel && (session.statusChannel.readyState == 'open')) {
+                session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
+            }
         });
     }
     if (localpanned){
@@ -457,8 +461,12 @@ Session.prototype.addStream = function(stream,kind) {
                 var id = sessionkva[0];
                 if (id != this.fid) {
                     var session = sessionkva[1];
-                    that.panned.connect(session.dcomp); // they hear me
-                    session.panned.connect(that.dcomp); // I hear them
+                    if (that.panned && session.dcomp) {
+                        that.panned.connect(session.dcomp); // they hear me
+                    }
+                    if (that.dcomp && session.panned) {
+                        session.panned.connect(that.dcomp); // I hear them
+                    }
                 } else {
                     console.log("skip me "+id);
                 }
@@ -480,7 +488,7 @@ Session.prototype.addStream = function(stream,kind) {
                 console.log("added panned outbound stream");
             }
         }  else {
-            startRecTime = Date.now();
+            //startRecTime = Date.now();
             console.log("added remote stream to audiotag");
             document.getElementById("them").srcObject = stream;
         }
@@ -505,16 +513,16 @@ Session.prototype.checkLoss = function(){
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
                         var colour = "grey";
-                        if (lost > this.lastLoss){
-                            var diffl = lost - this.lastLoss;
-                            var diffp = recvd -this.lastRecv;
+                        if (lost > that.lastLoss){
+                            var diffl = lost - that.lastLoss;
+                            var diffp = recvd -that.lastRecv;
                             var pct = Math.ceil(100.0 * diffl /diffp);
                             if ( pct > 0){
                                 colour = rgb(128+pct,128,128);
                             }
                         }
-                        this.lastLoss = lost;
-                        this.lastRecv = recvd;
+                        that.lastLoss = lost;
+                        that.lastRecv = recvd;
                         that.rdiv.setAttribute("style","background-color:"+colour+";");
 
                     }
@@ -636,9 +644,11 @@ function messageDeal(event){
         var mo = JSON.parse(evt.data);
         if (mo.act){
             if (mo.act =="add"){
-                var sess = new Session(mo.fid,mo.pan);
-                console.log("adding user "+mo.fid);
-                sessions[mo.fid]= sess;
+                if (!sessions[mo.fid]) {
+                    var sess = new Session(mo.fid, mo.pan);
+                    console.log("adding user " + mo.fid);
+                    sessions[mo.fid] = sess;
+                }
             }
             if (mo.act =="del"){
                 console.log("delete user "+mo.fid);
@@ -736,11 +746,10 @@ function setupAudio() {
 }
 
 function setupRTC(){
-        if (!initiator) {
             var session = new Session(cid);
             session.setupRTC();
             sessions[cid] = session;
-        }
+
 }
 
 
@@ -800,9 +809,7 @@ function accepted() {
                 console.log("href = "+url);
 
                 initiator = (mid === cid);
-                if (initiator){
-                    var fake = new Session(mid,"0");
-                }
+
                 var smodal;
                 if (initiator && !("StereoPannerNode" in window)) {
                     smodal ="#nomediaapi";
