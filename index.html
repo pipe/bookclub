@@ -191,8 +191,6 @@ function Session(id,lpan) {
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
-        this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
-        this.setupRTC();
         console.log("created peer connection for " + id);
         this.lcandyStash = [];
     } else {
@@ -224,6 +222,7 @@ function Session(id,lpan) {
     }
 };*/
 Session.prototype.offerDeal = function (data) {
+    this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
         this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
             ans.sdp = tweakSDP(ans.sdp);
@@ -312,16 +311,20 @@ Session.prototype.stopSession = function() {
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
-        this.pc.onicecandidate = (e) => {
+    console.log("setting up webRTC for "+this.fid);
+    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
+    this.pc.onicecandidate = (e) => {
             console.log("local ice candidate", e.candidate);
             if (e.candidate != null) {
-                if (e.candidate.candidate.indexOf("TCP") == -1) {
+                if (candyProt(e.candidate.candidate).toUpperCase()!="TCP") {
                     if (this.pc.signalingState == 'stable') {
                         sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
                     } else {
                         console.log("stashing ice candidate");
                         this.lcandyStash.push(e.candidate);
                     }
+                } else {
+                    console.log("skip TCP candidates");
                 }
             }
         };
@@ -381,6 +384,8 @@ Session.prototype.setupRTC = function(){
         this.pc.ondatachannel = (evt) => {
             console.log("got new datachannel from " +this.fid);
             this.statusChannel = evt.channel;
+            console.log("got new datachannel from " +this.statusChannel.label);
+
             this.statusChannel.onopen = (ev) => {
                 console.log("got open datachannel from " +this.fid);
                 that.tellAll();
@@ -506,24 +511,25 @@ Session.prototype.addStream = function(stream,kind) {
 
 Session.prototype.checkLoss = function(){
     var that = this;
-    this.pc.getReceivers()[0].getStats().then(
-        function(rs) {
-            rs.forEach( function (d){
-                    if(d.type ==="inbound-rtp"){
+    if (this.pc) {
+        this.pc.getReceivers()[0].getStats().then(
+            function (rs) {
+                rs.forEach(function (d) {
+                    if (d.type === "inbound-rtp") {
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
                         var colour = "grey";
-                        if (lost > that.lastLoss){
+                        if (lost > that.lastLoss) {
                             var diffl = lost - that.lastLoss;
-                            var diffp = recvd -that.lastRecv;
-                            var pct = Math.ceil(100.0 * diffl /diffp);
-                            if ( pct > 0){
-                                colour = rgb(128+pct,128,128);
+                            var diffp = recvd - that.lastRecv;
+                            var pct = Math.ceil(100.0 * diffl / diffp);
+                            if (pct > 0) {
+                                colour = rgb(128 + pct, 128, 128);
                             }
                         }
                         that.lastLoss = lost;
                         that.lastRecv = recvd;
-                        that.rdiv.setAttribute("style","background-color:"+colour+";");
+                        that.rdiv.setAttribute("style", "background-color:" + colour + ";");
 
                     }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
@@ -538,10 +544,13 @@ Session.prototype.checkLoss = function(){
                 }
             )
         });
+    }
 }
 
 
-function rgb(r, g, b){
+function rgb
+(r, g,
+ b){
     r = Math.floor(r);
     g = Math.floor(g);
     b = Math.floor(b);
@@ -597,6 +606,14 @@ function messageDeal(event){
     }
 }
 
+function candyProt(candy){
+    var ret = "none";
+    var bits = candy.split(" ");
+    if (bits.length >= 3){
+        ret = bits[2];
+    }
+    return ret;
+}
     function sendMessage(to,from,type,data){
         var messageJ = {
             to:to,
@@ -613,14 +630,23 @@ function messageDeal(event){
     // button actions
     // this is singular -
     function startCall(fid){
+
         var that = sessions[cid];
         var pc = that.pc;
 
-        that.statusChannel = pc.createDataChannel("status");
-        that.statusChannel.onopen = function(){
+        that.statusChannel = pc.createDataChannel("status-"+Date.now());
+        that.statusChannel.onopen = () => {
+            console.log("guest's status channel opened - sending ping");
+            that.statusChannel.send(JSON.stringify({act:"ping",date:Date.now()}));
+        };
+        that.statusChannel.onclose = (e) => {
+            console.log("guest's status channel closed "+e);
+        };
+        that.statusChannel.onerror = (e) => {
+            console.log("guest's status channel errored "+e);
         };
         console.log("created status datachannel");
-        that.statusChannel.onmessage = function (evt){
+        that.statusChannel.onmessage = (evt) => {
             statusDeal(evt);
         };
         pc.createOffer(peerConnectionOfferAnswerCriteria)
@@ -745,12 +771,11 @@ function setupAudio() {
 
 }
 
-function setupRTC(){
-            var session = new Session(cid);
-            session.setupRTC();
-            sessions[cid] = session;
-
-}
+    function setupRTC() {
+        var session = new Session(cid);
+        session.setupRTC();
+        sessions[cid] = session;
+    }
 
 
 function shared() {
