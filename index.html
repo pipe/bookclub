@@ -554,7 +554,7 @@ function rgb
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; sprop-stereo=1 ptime=60; useinbandfec=1; maxaveragebitrate=32000";
             }
         }
         return (lines.join("\r\n"));
@@ -712,7 +712,7 @@ function setupAudio() {
     myac = new AudioContext();
 
     setNoSleep();
-    var gumConstraints = {audio: true, video: false};
+    var gumConstraints = {audio: {channelCount: 2} , video: false};
 
     // connect to our speakers
     if (initiator){
