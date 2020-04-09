@@ -202,25 +202,15 @@ function Session(id,lpan) {
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
     if (initiator && isChrome) {
-        // add an audio tag per recipient
+        // add an audio tag per recipient because chrome needs some suckage on the pipe...
         this.audio = document.createElement("audio");
         this.audio.setAttribute("style","display: none;");
+        this.audio.setAttribute("muted","muted");
         this.rdiv.appendChild(this.audio);
     }
     Robohash.render(this.fid,this.rdiv);
     remoteslot.appendChild(this.rdiv);
 };
-/*Session.prototype.setImage = function(imageData){
-    console.log("setting session image");
-    this.img = document.createElement("img");
-    this.img.setAttribute("class","img-fluid");
-    this.img.setAttribute("src",imageData);
-    this.rdiv.appendChild(this.img);
-    this.imageData = imageData;
-    if (initiator) {
-        this.tellAll();
-    }
-};*/
 Session.prototype.offerDeal = function (data) {
     this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
@@ -439,18 +429,18 @@ Session.prototype.addStream = function(stream,kind) {
             // now connect panned to :
             // local destination...
             if (this.audio != null){
-                // chrome wont accept webaudio streams into a <audio> object
-                // chrome also only accepts the _last_ webRTC stream into an <audio>
-                // so the hack is to make many of them and connect to one per member
+                // note that these only exist because chrome is weird and needs an audio tag
+                // which can (and should) be muted - so this makes no sound.
                 this.audio.srcObject = stream;
-                this.audio.play();
-            } else {
-                if (localdcomp != null) {
-                    this.panned.connect(localdcomp);
-                } else {
-                    console.log("nowhere to plug "+this.fid);
-                }
             }
+
+            // plug the panned output into our dcomp so we get the stereo effect as host.
+            if (localdcomp != null) {
+                this.panned.connect(localdcomp);
+            } else {
+                console.log("nowhere to plug "+this.fid);
+            }
+
             var that = this;
 
             // outbound
@@ -725,9 +715,9 @@ function setupAudio() {
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
-    if ((initiator) && (!isChrome)){
+    if (initiator){
         // this works beautifully on firefox but fails in chrome
-        // so as an alternative in chrome we make a _lot_ of audio devices
+        // unless we make a _lot_ of <audio> tags
         localdcomp = myac.createDynamicsCompressor();
         var dests = myac.createMediaStreamDestination();
         localdcomp.connect(dests);
