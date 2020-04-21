@@ -506,6 +506,7 @@ Session.prototype.checkLoss = function(){
     if (this.pc) {
         this.pc.getReceivers()[0].getStats().then(
             function (rs) {
+                var style = "";
                 rs.forEach(function (d) {
                     if (d.type === "inbound-rtp") {
                         var recvd = d.packetsReceived;
@@ -521,13 +522,18 @@ Session.prototype.checkLoss = function(){
                         }
                         that.lastLoss = lost;
                         that.lastRecv = recvd;
-                        that.rdiv.setAttribute("style", "background-color:" + colour + ";");
+                        style += "background-color:" + colour + "; ";
 
                     }
                     if (d.type === "track") {
                         that.audioLevel = d.audioLevel;
                         var bwidth = Math.floor((that.audioLevel * 10.0));
-                        that.rdiv.setAttribute("style", "border-style:" +(bwidth > 2)?"outset;":"hidden;");
+                        if (bwidth >= 2){
+                            style += " border-style:outset; ";
+                        } else {
+                            style += " border-style:hidden; ";
+                        }
+                        //console.log("bwidth ="+bwidth);
                     }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
                         $("#delay").text(""+d.currentRoundTripTime);
@@ -539,8 +545,12 @@ Session.prototype.checkLoss = function(){
                         $("#local").text(d.candidateType);
                     }*/
                 }
-            )
-        });
+
+                );
+                that.rdiv.setAttribute("style", style);
+                //console.log("style ="+style);
+
+            });
     }
 }
 
