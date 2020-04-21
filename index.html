@@ -128,7 +128,7 @@
         <div class="col" id="0.8"></div>
     </div>
 </div>
-<video id="them" style="display: none" autoplay > </video>
+<video id="them" style="display: none" autoplay playsinline > </video>
 <!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
 </video-->
@@ -527,7 +527,7 @@ Session.prototype.checkLoss = function(){
                     if (d.type === "track") {
                         that.audioLevel = d.audioLevel;
                         var bwidth = Math.floor((that.audioLevel * 10.0));
-                        that.rdiv.setAttribute("style", "border-style:" +(bwidth > 10)?"outset;":"hidden;");
+                        that.rdiv.setAttribute("style", "border-style:" +(bwidth > 2)?"outset;":"hidden;");
                     }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
                         $("#delay").text(""+d.currentRoundTripTime);
@@ -774,7 +774,17 @@ function setupAudio() {
         sessions[cid] = session;
     }
 
+    var playing = false;
 
+    function toggleplay(){
+        var audio = document.getElementById('them');
+        if (!playing) {
+            audio.play();
+        } else {
+            audio.pause();
+        }
+        playing = ! playing;
+    }
 function shared() {
     setupRTC();
     setupAudio().then(_ => {
@@ -913,6 +923,8 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#statsZone").hide();
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
+        document.getElementById("me").onclick = toggleplay;
+
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));
