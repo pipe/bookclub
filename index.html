@@ -14,8 +14,9 @@
         body {
             background-image: url("fhp2.jpeg");
             background-color: #cccccc;
-            background-size: cover;
             background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
         }
         .footer {
             position: fixed;
@@ -127,10 +128,10 @@
         <div class="col" id="0.8"></div>
     </div>
 </div>
-<audio id="them" style="display: none" autoplay > </audio>
-<video id="nosleep" width="1" playsinline muted>
+<video id="them" style="display: none" autoplay > </video>
+<!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
-</video>
+</video-->
 <script type="module">
     import Robohash from './robohash/robohash.min.js';
 
@@ -186,6 +187,7 @@ function Session(id,lpan) {
     this.peerin = null;
     this.statusChannel = null;
     this.audio = null;
+    this.audioLevel =0.0;
     //this.img = null;
     //this.imageData = null;
     if (!lpan) {
@@ -206,6 +208,7 @@ function Session(id,lpan) {
         this.audio.setAttribute("style","display: none;");
         this.audio.setAttribute("muted","muted");
         this.rdiv.appendChild(this.audio);
+        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
     }
     Robohash.render(this.fid,this.rdiv);
     remoteslot.appendChild(this.rdiv);
@@ -521,6 +524,11 @@ Session.prototype.checkLoss = function(){
                         that.rdiv.setAttribute("style", "background-color:" + colour + ";");
 
                     }
+                    if (d.type === "track") {
+                        that.audioLevel = d.audioLevel;
+                        var bwidth = Math.floor((that.audioLevel * 10.0));
+                        that.rdiv.setAttribute("style", "border-style:" +(bwidth > 10)?"outset;":"hidden;");
+                    }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
                         $("#delay").text(""+d.currentRoundTripTime);
                     }
@@ -710,7 +718,7 @@ function setupAudio() {
 
     myac = new AudioContext();
 
-    setNoSleep();
+    //setNoSleep();
     var gumConstraints = {audio: true, video: false};
 
     // connect to our speakers
@@ -848,7 +856,7 @@ function accepted() {
 
         }
     }
-
+/*
 function _addSourceToVideo(element, type, dataURI) {
     var source = document.createElement('source');
     source.src = dataURI;
@@ -857,6 +865,7 @@ function _addSourceToVideo(element, type, dataURI) {
 }
 /* find the original at https://github.com/richtr/NoSleep.js/ */
 /* brutally butchered version of the above keeps the phone from sleeping becuase it sees a video playing...*/
+/*
     function setNoSleep() {
         var videoEl = document.getElementById("nosleep");
         _addSourceToVideo(videoEl, 'webm', 'data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQI0VSalmQCgq17FAAw9CQE2AQAZ3aGFtbXlXQUAGd2hhbW15RIlACECPQAAAAAAAFlSua0AxrkAu14EBY8WBAZyBACK1nEADdW5khkAFVl9WUDglhohAA1ZQOIOBAeBABrCBCLqBCB9DtnVAIueBAKNAHIEAAIAwAQCdASoIAAgAAUAmJaQAA3AA/vz0AAA=');
@@ -877,7 +886,7 @@ function _addSourceToVideo(element, type, dataURI) {
         });
         videoEl.play();
     }
-
+*/
 
     // some housekeeping
 
