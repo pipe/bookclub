@@ -168,7 +168,7 @@ var localStream;
 var localdcomp;
 var localpanned;
 var mute = false;
-var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
+var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
@@ -178,6 +178,7 @@ var isChrome = ("chrome" in window);
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
 
 var canv2d = document.getElementById("brady").getContext( '2d' );
+var mcu;
 
 function Session(id,lpan) {
     this.checker = null;
@@ -210,6 +211,8 @@ function Session(id,lpan) {
         this.audio = document.createElement("video");
         this.audio.setAttribute("style","display: none;");
         this.audio.setAttribute("muted","muted");
+        this.audio.setAttribute("autoplay","true");
+
         //this.rdiv.appendChild(this.audio);
         //this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
     }
@@ -416,118 +419,146 @@ Session.prototype.tellAll = function() {
         }
     });
 };
-Session.prototype.addStream = function(stream,kind) {
-    if (!kind) {
-        kind = "audio/video";
-    }
-    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
-    console.log("got new stream" + stream + " kind =" + kind);
-    if (kind.indexOf("audio")!= -1) {
-        if (initiator) {
-            // inbound....
-            this.peerin = myac.createMediaStreamSource(stream);
-            this.panned = myac.createStereoPanner();
-            this.panned.pan.value = this.pan;
-            console.log("panned to "+this.pan);
-            this.peerin.connect(this.panned);
+    Session.prototype.addStream = function(stream,kind) {
+        if (!kind) {
+            kind = "audio/video";
+        }
+        $("#status").text("Call connected to " + Object.keys(sessions).length + " member(s).");
+        console.log("got new stream" + stream + " kind =" + kind);
+        if (kind.indexOf("audio") != -1) {
+            if (initiator) {
+                // inbound....
+                this.peerin = myac.createMediaStreamSource(stream);
+                this.panned = myac.createStereoPanner();
+                this.panned.pan.value = this.pan;
+                console.log("panned to " + this.pan);
+                this.peerin.connect(this.panned);
 
-            // now connect panned to :
-            // local destination...
+                // now connect panned to :
+                // local destination...
 
-            // plug the panned output into our dcomp so we get the stereo effect as host.
-            if (localdcomp != null) {
-                this.panned.connect(localdcomp);
-            } else {
-                console.log("nowhere to plug "+this.fid);
-            }
-
-            var that = this;
-
-            // outbound
-            // for now just add the localpanned stream
-
-            this.dcomp = myac.createDynamicsCompressor();
-            if (localpanned){
-                localpanned.connect(this.dcomp);
-                console.log("connect local stream to dcomp");
-            }
-
-            Object.entries(sessions).forEach(sessionkva => {
-                var id = sessionkva[0];
-                if (id != this.fid) {
-                    var session = sessionkva[1];
-                    if (that.panned && session.dcomp) {
-                        that.panned.connect(session.dcomp); // they hear me
-                    }
-                    if (that.dcomp && session.panned) {
-                        session.panned.connect(that.dcomp); // I hear them
-                    }
+                // plug the panned output into our dcomp so we get the stereo effect as host.
+                if (localdcomp != null) {
+                    this.panned.connect(localdcomp);
                 } else {
-                    console.log("skip me "+id);
+                    console.log("nowhere to plug " + this.fid);
                 }
 
-            });
+                var that = this;
 
+                // outbound
+                // for now just add the localpanned stream
 
-            this.peerout = myac.createMediaStreamDestination();
-            this.dcomp.connect(this.peerout);
-            var pc = this.pc;
-            var pstream = this.peerout.stream;
-            if (pc.addTrack) {
-                pstream.getTracks().forEach(track => {
-                    pc.addTrack(track, pstream);
-                    console.log("added panned outbound track ", track.id, track.kind);
+                this.dcomp = myac.createDynamicsCompressor();
+                if (localpanned) {
+                    localpanned.connect(this.dcomp);
+                    console.log("connect local stream to dcomp");
+                }
+
+                Object.entries(sessions).forEach(sessionkva => {
+                    var id = sessionkva[0];
+                    if (id != this.fid) {
+                        var session = sessionkva[1];
+                        if (that.panned && session.dcomp) {
+                            that.panned.connect(session.dcomp); // they hear me
+                        }
+                        if (that.dcomp && session.panned) {
+                            session.panned.connect(that.dcomp); // I hear them
+                        }
+                    } else {
+                        console.log("skip me " + id);
+                    }
+
                 });
-            } else {
-                pc.addStream(pstream);
-                console.log("added panned outbound stream");
+
+
+                this.peerout = myac.createMediaStreamDestination();
+                this.dcomp.connect(this.peerout);
+                var pc = this.pc;
+                var pstream = this.peerout.stream;
+                if (pc.addTrack) {
+                    pstream.getTracks().forEach(track => {
+                        pc.addTrack(track, pstream);
+                        console.log("added panned outbound track ", track.id, track.kind);
+                    });
+                    if (mcu) {
+                        mcu.getTracks().forEach(track => {
+                            pc.addTrack(track, mcu);
+                            console.log("added mcu outbound track ", track.id, track.kind);
+                        });
+                    }
+                } else {
+                    pc.addStream(pstream);
+                    console.log("added panned outbound stream");
+                    if (mcu) {
+                        pc.addStream(mcu);
+                        console.log("added mcu outbound stream");
+                    }
+                }
             }
-        }  else {
-            //startRecTime = Date.now();
-            // TODo?
-            console.log("added remote stream to audiotag");
-            document.getElementById("them").srcObject = stream;
+            var that = this;
+            this.checker = window.setInterval(function () {
+                that.checkLoss();
+            }, 1000);
+
+
+            // audio together here.
+            // depends on role
+            console.log('Audio sample Rate is ' + myac.sampleRate);
+            $("#chosenAction").show();
+            $("#statsZone").show();
         }
-        var that = this;
-        this.checker = window.setInterval(function() {that.checkLoss();},1000);
+        if (initiator) {
+            this.addVstream(stream, kind);
+        } else {
+            console.log("added remote "+kind+" stream to videotag");
+            var them = document.getElementById("them");
+            them.srcObject = stream;
+            if (kind.indexOf("video") != -1) {
+                console.log("setting up  remote stream canvas paint");
 
+                var dtc = function () {
+                    var cw = canv2d.canvas.width;
+                    var ch = canv2d.canvas.height;
+                    canv2d.drawImage(them, 0, 0, them.videoWidth, them.videoHeight, 0, 0, cw, ch);
+                    //console.log("drawing video for +"+that.fid+ " at " + x);
+                    //repeat this every time a new frame becomes available using
+                    //the browser's build-in requestAnimationFrame method
+                    requestAnimationFrame(dtc);
+                }
+                dtc();
+            }
+        }
 
-        // audio together here.
-        // depends on role
-        console.log('Audio sample Rate is '+ myac.sampleRate);
-        $("#chosenAction").show();
-        $("#statsZone").show();
-    }
-    if (initiator && (this.audio != null)){
+    };
+
+    Session.prototype.addVstream = function(stream) {
         // note that these only exist because chrome is weird and needs an audio tag
         // which can (and should) be muted - so this makes no sound. - also video now
         this.audio.srcObject = stream;
         console.log("added stream to local media object");
-        if (kind.indexOf("video")!= -1) {
-            this.audio.play();
-            var that = this;
+        var that = this;
 
-            var drawToCanvas = function () {
-                // draw the current frame of localVideo onto the canvas,
-                // starting at 0, 0 (top-left corner) and covering its full
-                // width and heigth
-                var cw = canv2d.canvas.width;
-                var ch = canv2d.canvas.height;
-                var abspan = (1.0 +that.pan) / 2.0 ;
-                var mw = cw/9.0;
-                var x = (cw * abspan) - mw;
+        var drawToCanvas = function () {
+            // draw the current frame of localVideo onto the canvas,
+            // starting at 0, 0 (top-left corner) and covering its full
+            // width and heigth
+            var cw = canv2d.canvas.width;
+            var ch = canv2d.canvas.height;
+            var abspan = (1.0 +that.pan) / 2.0 ;
+            var mw = cw/9.0;
+            var x = (cw * abspan) - mw;
 
-                canv2d.drawImage(that.audio, 0, 0, that.audio.videoWidth, that.audio.videoHeight, x, 0, mw, ch);
-                //console.log("drawing video for +"+that.fid+ " at " + x);
-                //repeat this every time a new frame becomes available using
-                //the browser's build-in requestAnimationFrame method
-                requestAnimationFrame(drawToCanvas);
-            }
-            //console.log("drawing video at " + x);
-            drawToCanvas();
+            canv2d.drawImage(that.audio, 0, 0, that.audio.videoWidth, that.audio.videoHeight, x, 0, mw, ch);
+            //console.log("drawing video for +"+that.fid+ " at " + x);
+            //repeat this every time a new frame becomes available using
+            //the browser's build-in requestAnimationFrame method
+            requestAnimationFrame(drawToCanvas);
         }
-    }
-};
+        //console.log("drawing video at " + x);
+        drawToCanvas();
+
+    };
 
 Session.prototype.checkLoss = function(){
     var that = this;
@@ -751,6 +782,12 @@ function candyProt(candy){
     }
 */
 
+function captureCanvas(){
+    var can = document.getElementById("brady");
+    mcu = can.captureStream(5);
+    console.log("captured canvas stream");
+}
+
     // plumb the local audio together.
 function setupAudio() {
 
@@ -792,6 +829,8 @@ function setupAudio() {
                     sessions[mid].audio.srcObject = stream;
                     console.log("added local stream to local media object");
                     sessions[mid].audio.play();
+                    sessions[mid].addVstream(stream);
+                    captureCanvas();
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
                     if (pc.addTrack) {
