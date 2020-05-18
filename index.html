@@ -116,7 +116,8 @@
     </div>
 </div>
 <div id="remotes" class="container-fluid footer" >
-    <div class="row no-gutters" >
+    <canvas id="brady" style="width:100%;height:fit-content;"/>
+    <!--div class="row no-gutters" >
         <div class="col" id="-0.8"></div>
         <div class="col" id="-0.6"></div>
         <div class="col" id="-0.4"></div>
@@ -126,7 +127,7 @@
         <div class="col" id="0.4"></div>
         <div class="col" id="0.6"></div>
         <div class="col" id="0.8"></div>
-    </div>
+    </div-->
 </div>
 <video id="them" style="display: none" autoplay playsinline > </video>
 <!--video id="nosleep" width="1" playsinline muted>
@@ -176,6 +177,8 @@ var isChrome = ("chrome" in window);
 
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
 
+var canv2d = document.getElementById("brady").getContext( '2d' );
+
 function Session(id,lpan) {
     this.checker = null;
     this.lastLoss = 0;
@@ -200,18 +203,18 @@ function Session(id,lpan) {
         console.log("dummy entry for " + id );
     }
     console.log("pan is " + this.pan);
-    this.rdiv = document.createElement("div");
-    var remoteslot = document.getElementById(""+this.pan);
+    //this.rdiv = document.createElement("div");
+    //var remoteslot = document.getElementById(""+this.pan);
     if (initiator && isChrome) {
         // add an audio tag per recipient because chrome needs some suckage on the pipe...
-        this.audio = document.createElement("audio");
+        this.audio = document.createElement("video");
         this.audio.setAttribute("style","display: none;");
         this.audio.setAttribute("muted","muted");
-        this.rdiv.appendChild(this.audio);
-        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
+        //this.rdiv.appendChild(this.audio);
+        //this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
     }
-    Robohash.render(this.fid,this.rdiv);
-    remoteslot.appendChild(this.rdiv);
+    //Robohash.render(this.fid,this.rdiv);
+    //remoteslot.appendChild(this.rdiv);
 };
 Session.prototype.offerDeal = function (data) {
     this.setupRTC();
@@ -430,11 +433,6 @@ Session.prototype.addStream = function(stream,kind) {
 
             // now connect panned to :
             // local destination...
-            if (this.audio != null){
-                // note that these only exist because chrome is weird and needs an audio tag
-                // which can (and should) be muted - so this makes no sound.
-                this.audio.srcObject = stream;
-            }
 
             // plug the panned output into our dcomp so we get the stereo effect as host.
             if (localdcomp != null) {
@@ -486,6 +484,7 @@ Session.prototype.addStream = function(stream,kind) {
             }
         }  else {
             //startRecTime = Date.now();
+            // TODo?
             console.log("added remote stream to audiotag");
             document.getElementById("them").srcObject = stream;
         }
@@ -498,6 +497,35 @@ Session.prototype.addStream = function(stream,kind) {
         console.log('Audio sample Rate is '+ myac.sampleRate);
         $("#chosenAction").show();
         $("#statsZone").show();
+    }
+    if (initiator && (this.audio != null)){
+        // note that these only exist because chrome is weird and needs an audio tag
+        // which can (and should) be muted - so this makes no sound. - also video now
+        this.audio.srcObject = stream;
+        console.log("added stream to local media object");
+        if (kind.indexOf("video")!= -1) {
+            this.audio.play();
+            var that = this;
+
+            var drawToCanvas = function () {
+                // draw the current frame of localVideo onto the canvas,
+                // starting at 0, 0 (top-left corner) and covering its full
+                // width and heigth
+                var cw = canv2d.canvas.width;
+                var ch = canv2d.canvas.height;
+                var abspan = (1.0 +that.pan) / 2.0 ;
+                var mw = cw/9.0;
+                var x = (cw * abspan) - mw;
+
+                canv2d.drawImage(that.audio, 0, 0, that.audio.videoWidth, that.audio.videoHeight, x, 0, mw, ch);
+                //console.log("drawing video for +"+that.fid+ " at " + x);
+                //repeat this every time a new frame becomes available using
+                //the browser's build-in requestAnimationFrame method
+                requestAnimationFrame(drawToCanvas);
+            }
+            //console.log("drawing video at " + x);
+            drawToCanvas();
+        }
     }
 };
 
@@ -547,7 +575,7 @@ Session.prototype.checkLoss = function(){
                 }
 
                 );
-                that.rdiv.setAttribute("style", style);
+                //that.rdiv.setAttribute("style", style);
                 //console.log("style ="+style);
 
             });
@@ -729,7 +757,12 @@ function setupAudio() {
     myac = new AudioContext();
 
     //setNoSleep();
-    var gumConstraints = {audio: true, video: false};
+    var gumConstraints = {audio: true, video: {
+        width: {  ideal: 240 },
+        height: { ideal: 320 },
+        frameRate: {ideal: 5},
+        //aspectRatio: { ideal: 1.7777777778 }
+    },};
 
     // connect to our speakers
     if (initiator){
@@ -755,6 +788,10 @@ function setupAudio() {
                     localpanned.pan.value = 0.0;
                     console.log("local stream panned to 0.0 ");
                     localsrc.connect(localpanned);
+                    // do something with video here - plunk it on our robot....
+                    sessions[mid].audio.srcObject = stream;
+                    console.log("added local stream to local media object");
+                    sessions[mid].audio.play();
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
                     if (pc.addTrack) {
