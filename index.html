@@ -129,6 +129,7 @@
         <div class="col" id="0.8"></div>
     </div>
     <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
+    <audio id="audio" style="display:none;" autoplay playsinline > </audio>
 </div>
 
 <!--video id="nosleep" width="1" playsinline muted>
@@ -211,11 +212,11 @@ function Session(id,lpan) {
     var height = canvas.clientHeight;
     var width = Math.min(canvas.clientWidth /10,height*0.75);
 
-    if (initiator && isChrome) {
+    if (initiator) {
         // add an video tag per recipient because chrome needs some suckage on the pipe...
         this.audio = document.createElement("video");
         //this.audio.setAttribute("style","display: none;");
-        this.audio.setAttribute("muted","muted");
+        this.audio.muted = true;
         this.audio.setAttribute("autoplay","true");
         this.audio.setAttribute("width",width);
         this.audio.setAttribute("height",height);
@@ -518,22 +519,17 @@ Session.prototype.tellAll = function() {
         if (initiator) {
             this.addVstream(stream, kind);
         } else {
-            console.log("added remote "+kind+" stream to videotag");
-            var them = document.getElementById("them");
-            them.srcObject = stream;
-            $("#them").show();
-            /*if (kind.indexOf("video") != -1) {
-                console.log("setting up  remote stream canvas paint");
-
-                var dtc = function () {
-                    canv2d.drawImage(them, 0, 0, them.videoWidth, them.videoHeight);
-                    //console.log("drawing video for +"+that.fid+ " at " + x);
-                    //repeat this every time a new frame becomes available using
-                    //the browser's build-in requestAnimationFrame method
-                    requestAnimationFrame(dtc);
-                }
-                dtc();
-            }*/
+            if (kind.indexOf("audio") != -1) {
+                console.log("added remote "+kind+" stream to audio");
+                var au = document.getElementById("audio");
+                au.srcObject = stream;
+                au.play();
+            } else {
+                console.log("added remote "+kind+" stream to videotag");
+                var them = document.getElementById("them");
+                them.srcObject = stream;
+                $("#them").show();
+            }
         }
 
     };
@@ -542,9 +538,11 @@ Session.prototype.tellAll = function() {
 
         // note that these only exist because chrome is weird and needs an audio tag
         // which can (and should) be muted - so this makes no sound. - also video now
-        this.audio.srcObject = stream;
-        this.audio.play();
-        console.log("added stream to local media object");
+        if (isChrome) {
+            this.audio.srcObject = stream;
+            this.audio.play();
+            console.log("added stream to local media object");
+        }
         //var settings = getSize(stream);
         var that = this;
 
@@ -840,6 +838,7 @@ function setupAudio() {
                     // do something with video here - plunk it on our robot....
                     sessions[mid].addVstream(stream);
                     $("#brady").show();
+                    $("#them").muted = true;
                     captureCanvas();
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
