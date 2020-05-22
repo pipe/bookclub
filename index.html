@@ -640,7 +640,7 @@ function rgb
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=10; useinbandfec=1; maxaveragebitrate=32000";
             }
         }
         return (lines.join("\r\n"));
@@ -794,7 +794,7 @@ function candyProt(candy){
 
 function captureCanvas(){
     var can = document.getElementById("brady");
-    mcu = can.captureStream(5);
+    mcu = can.captureStream(20);
     console.log("captured canvas stream");
 }
 
@@ -807,7 +807,7 @@ function setupAudio() {
     var gumConstraints = {audio: true, video: {
         width: {  ideal: 240 },
         height: { ideal: 320 },
-        frameRate: {ideal: 5},
+        frameRate: {ideal: 20},
         //aspectRatio: { ideal: 1.7777777778 }
     },};
 
