@@ -26,6 +26,8 @@
             color: white;
             text-align: center;
         }
+        html, body { height: 100%; width: 100%; margin: 0; }
+        .all { height: 100%; width: 100%;}
     </style>
 
 </head>
@@ -37,7 +39,7 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
 <a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
 
-<div class="card">
+<div class="card container-fluid all">
     <div id="remotes" class="card-header" >
         <canvas id="brady" width="1200" height="150"></canvas>
         <div id="vids" class="row no-gutters" >
@@ -66,8 +68,7 @@
         </div>
     </div>
     <div class="card-footer">
-        <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
-        <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
+        <h2><span class="badge badge-primary" id="role"></span><span class="badge badge-primary" id="status"></span></h2>
         <!--div style="width: 80px; height: 80px;" id="me">me</div-->
     </div>
 
@@ -342,9 +343,16 @@ Session.prototype.stopSession = function() {
         this.pc = null;
     }
     if (this.rdiv) {
+        this.audio.srcObject = null;
+        this.audio.pause();
+        this.rdiv.removeChild(this.audio);
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
+    var cw = canv2d.canvas.width;
+    var ch = canv2d.canvas.height;
+    canv2d.clearRect(0,0, cw, ch);
+
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
