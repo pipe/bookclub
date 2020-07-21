@@ -36,16 +36,41 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
 <a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
-<div class="container">
-    <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
-    <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
-    <div style="width: 80px; height: 80px;" id="me">me</div>
-</div>
-<div class="container">
+
+<div class="card">
+    <div id="remotes" class="card-header" >
+        <canvas id="brady" width="1200" height="150"></canvas>
+        <div id="vids" class="row no-gutters" >
+            <div class="col" id="-0.9"></div>
+            <div class="col" id="-0.8"></div>
+            <div class="col" id="-0.6"></div>
+            <div class="col" id="-0.4"></div>
+            <div class="col" id="-0.2"></div>
+            <div class="col" id="0"></div>
+            <div class="col" id="0.2"></div>
+            <div class="col" id="0.4"></div>
+            <div class="col" id="0.6"></div>
+            <div class="col" id="0.8"></div>
+            <div class="col" id="0.9"></div>
+        </div>
+        <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
+        <audio id="audio" style="display:none;" autoplay playsinline > </audio>
+    </div>
+
+    <video id="bookVideo" muted autoplay="true" class="card-img-top">Book goes here</video>
+
+    <div class="card-body">
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
         </div>
+    </div>
+    <div class="card-footer">
+        <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
+        <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
+        <!--div style="width: 80px; height: 80px;" id="me">me</div-->
+    </div>
+
 </div>
 
 <div id="share" class="modal" tabindex="-1" role="dialog">
@@ -62,6 +87,26 @@
             </div>
             <div class="modal-footer">
                 <button id="shareDone" type="button" class="btn btn-secondary" data-dismiss="modal" >Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="shareScreen" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Share the book. </h5>
+            </div>
+            <div class="modal-body" id="sharePrompt">
+                <p>If you have an electronic copy of the book on this computer</p>
+                <p>you can use the 'Share Book' button to select the window containing the book.</p>
+                <p>This will share your view of the book with the other members.</p>
+                <p>If you don't have the book, click 'No e-Book'</p>
+            </div>
+            <div class="modal-footer">
+                <button id="shareMyApp" type="button" class="btn btn-secondary" data-dismiss="modal" >Share Book</button>
+                <button id="noShareApp" type="button" class="btn btn-secondary" data-dismiss="modal" >No e-Book</button>
+
             </div>
         </div>
     </div>
@@ -115,28 +160,13 @@
         </div>
     </div>
 </div>
-<div id="remotes" class="container-fluid footer" >
-    <canvas id="brady" width="1200" height="150"></canvas>
-    <div id="vids" class="row no-gutters" >
-        <div class="col" id="-0.8"></div>
-        <div class="col" id="-0.6"></div>
-        <div class="col" id="-0.4"></div>
-        <div class="col" id="-0.2"></div>
-        <div class="col" id="0"></div>
-        <div class="col" id="0.2"></div>
-        <div class="col" id="0.4"></div>
-        <div class="col" id="0.6"></div>
-        <div class="col" id="0.8"></div>
-    </div>
-    <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
-    <audio id="audio" style="display:none;" autoplay playsinline > </audio>
-</div>
+
 
 <!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
 </video-->
 <script type="module">
-    import Robohash from './robohash/robohash.min.js';
+    // import Robohash from './robohash/robohash.min.js';
 
     var properties = {
 websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
@@ -174,10 +204,11 @@ var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToRece
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
+var bookStream = null;
 //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
-var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
+var pans = [ 0.9, -0.9, 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
 
 var canv2d = document.getElementById("brady").getContext( '2d' );
 var mcu;
@@ -487,12 +518,18 @@ Session.prototype.tellAll = function() {
                 if (pc.addTrack) {
                     pstream.getTracks().forEach(track => {
                         pc.addTrack(track, pstream);
-                        console.log("added panned outbound track ", track.id, track.kind);
+                        console.log("added panned outbound track ", track.id, track.kind, track.label);
                     });
                     if (mcu) {
                         mcu.getTracks().forEach(track => {
                             pc.addTrack(track, mcu);
-                            console.log("added mcu outbound track ", track.id, track.kind);
+                            console.log("added mcu outbound track ", track.id, track.kind, track.label);
+                        });
+                    }
+                    if (bookStream){
+                        bookStream.getTracks().forEach(track => {
+                            pc.addTrack(track, bookStream);
+                            console.log("added book outbound track ", track.id, track.kind, track.label);
                         });
                     }
                 } else {
@@ -525,10 +562,17 @@ Session.prototype.tellAll = function() {
                 au.srcObject = stream;
                 au.play();
             } else {
-                console.log("added remote "+kind+" stream to videotag");
                 var them = document.getElementById("them");
-                them.srcObject = stream;
-                $("#them").show();
+                if (them.srcObject == null) {
+                    console.log("added remote " + kind + " stream to videotag");
+                    them.srcObject = stream;
+                    $("#them").show();
+                } else {
+                    var book = document.getElementById("bookVideo");
+                    console.log("added remote " + kind + " stream to book");
+                    book.srcObject = stream;
+                    $("#bookVideo").show();
+                }
             }
         }
 
@@ -851,6 +895,7 @@ function setupAudio() {
                         pc.addStream(stream);
                         console.log("added local stream");
                     }
+                    var bookshare = pc.addTransceiver("video", {direction:"recvonly"});
                 }
                 resolve(false);
             })
@@ -880,21 +925,42 @@ function setupAudio() {
         }
         playing = ! playing;
     }
-function shared() {
-    setupRTC();
-    setupAudio().then(_ => {
-        console.log("ready for offer");
-        $("#status").text("Waiting for guests.");
-    });
-}
-function accepted() {
-    setupRTC();
-    setupAudio().then(_ => {
-        console.log("ready for offer");
-        $("#status").text("Mic available");
-        startCall(cid)
-    });
-}
+    function shared() {
+        setupRTC();
+        setupAudio().then(_ => {
+            console.log("ready for offer");
+            $("#status").text("Waiting for guests.");
+        });
+    }
+    function accepted() {
+        setupRTC();
+        setupAudio().then(_ => {
+            console.log("ready for offer");
+            $("#status").text("Mic available");
+            startCall(cid)
+        });
+    }
+    function noShareApp() {
+        $('#share').modal('show');
+    }
+    async function shareMyApp() {
+        try {
+            var displayMediaOptions ={
+                video: {
+                    cursor: "always"
+                },
+                audio: false
+            };
+            bookStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+            var bv = document.getElementById("bookVideo");
+            bv.srcObject = bookStream;
+            $("#bookVideo").show();
+        } catch(err) {
+            console.error("Error: " + err);
+        }
+        noShareApp();
+    }
+
 // decide who we are initiator or recpient.
 // notice that the actual call goes in the reverse direction
 // the recipient of the invite actually creates the audiobearing peerconnection
@@ -943,10 +1009,10 @@ function accepted() {
                 } else {
                     $("#role").text(initiator ? "Host" : "Guest");
                     $("#status").text("Waiting for connection");
-                    smodal = initiator ? "#share" : "#accept";
+                    smodal = initiator ? "#shareScreen" : "#accept";
                 }
                 $(smodal).modal('show');
-                Robohash.render(mid, document.getElementById("me"));
+                //Robohash.render(mid, document.getElementById("me"));
             };
             socket.onerror = (e) => {
                 console.log("can't open websocket", e);
@@ -1028,11 +1094,15 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#them").hide();
         $("#brady").hide();
         $("#vids").hide();
+        $("#bookVideo").hide();
+
 
 
         document.getElementById("callAccept").onclick = accepted;
+        document.getElementById("shareMyApp").onclick = shareMyApp;
+        document.getElementById("noShareApp").onclick = noShareApp;
         document.getElementById("shareDone").onclick = shared;
-        document.getElementById("me").onclick = toggleplay;
+        //document.getElementById("me").onclick = toggleplay;
 
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
