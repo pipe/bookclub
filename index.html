@@ -65,6 +65,9 @@
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
+            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
+                Record Call
+            </button>
         </div>
     </div>
     <div class="card-footer">
@@ -206,10 +209,15 @@ var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
 var bookStream = null;
-//var myImage = null;
+var recorder;
+var chunks = [];
+var saved = false;
+var startRecTime = 0;
+
+    //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
-var pans = [ 0.9, -0.9, 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
+var pans = [ 0.9, -0.9, 0.2, -0.2, 0.6 , -0.6, 0.8, -0.8, 0.4, -0.4, 0.0];
 
 var canv2d = document.getElementById("brady").getContext( '2d' );
 var mcu;
@@ -890,6 +898,8 @@ function setupAudio() {
                     // do something with video here - plunk it on our robot....
                     sessions[mid].addVstream(stream);
                     $("#brady").show();
+                    $("#recordCall").show();
+
                     $("#them").muted = true;
                     captureCanvas();
                 } else {
@@ -948,7 +958,60 @@ function setupAudio() {
             startCall(cid)
         });
     }
-    function noShareApp() {
+    function repaintDuration(){
+        var diff = Date.now() - startRecTime;
+        console.log ("data on at "+diff);
+        var mins = Math.floor(diff / 60000);
+        var secs = Math.floor((diff % 60000) / 1000);
+        $("#recordCall").text(""+mins+":"+secs);
+    }
+
+    function recordCall() {
+        if (!recorder) {
+            startRecTime = Date.now();
+            var recStream = myac.createMediaStreamDestination();
+            recorder = new MediaRecorder(recStream.stream);
+            localpanned.connect(recStream);
+            localdcomp.connect(recStream);
+            recorder.ondataavailable = function (evt) {
+                chunks.push(evt.data);
+                repaintDuration();
+            };
+            recorder.onstop = function (evt) {
+                // Make blob out of our blobs, and open it.
+                var blob = new Blob(chunks, {'type': 'audio/ogg; codecs=opus'});
+                saveData(blob)
+            };
+            recorder.start(10000);
+            repaintDuration();
+            saved = false;
+            window.onbeforeunload = function() {
+                return !saved ? "If you leave this page you will lose the recording." : null;
+            }
+        } else {
+            recorder.stop();
+            recorder = null;
+        }
+    }
+    function saveData(blob) {
+        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.webm';
+
+        console.log("Save data ?");
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        console.log("saving wav blob as " + fileName);
+        var burl = window.URL.createObjectURL(blob);
+        a.href = burl;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(burl);
+        saved = true;
+        $("#status").text("Call saved as "+fileName);
+    }
+
+
+        function noShareApp() {
         $('#share').modal('show');
     }
     async function shareMyApp() {
@@ -1103,6 +1166,7 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#brady").hide();
         $("#vids").hide();
         $("#bookVideo").hide();
+        $("#recordCall").hide();
 
 
 
@@ -1110,6 +1174,8 @@ function _addSourceToVideo(element, type, dataURI) {
         document.getElementById("shareMyApp").onclick = shareMyApp;
         document.getElementById("noShareApp").onclick = noShareApp;
         document.getElementById("shareDone").onclick = shared;
+        document.getElementById("recordCall").onclick = recordCall;
+
         //document.getElementById("me").onclick = toggleplay;
 
 
