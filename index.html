@@ -59,7 +59,7 @@
         <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
-    <video id="bookVideo" muted autoplay="true" class="card-img-top">Book goes here</video>
+    <video id="bookVideo" muted autoplay="true" class="card-img-top" poster="fhp2.jpeg">Book goes here</video>
 
     <div class="card-body">
         <div id="chosenAction" class="row justify-content-around">
@@ -700,7 +700,7 @@ function rgb
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=10; useinbandfec=1; maxaveragebitrate=32000";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
             }
         }
         return (lines.join("\r\n"));
@@ -854,7 +854,7 @@ function candyProt(candy){
 
 function captureCanvas(){
     var can = document.getElementById("brady");
-    mcu = can.captureStream(20);
+    mcu = can.captureStream(5);
     console.log("captured canvas stream");
 }
 
@@ -867,7 +867,7 @@ function setupAudio() {
     var gumConstraints = {audio: true, video: {
         width: {  ideal: 240 },
         height: { ideal: 320 },
-        frameRate: {ideal: 20},
+        frameRate: {ideal: 5},
         //aspectRatio: { ideal: 1.7777777778 }
     },};
 
@@ -1011,7 +1011,7 @@ function setupAudio() {
     }
 
 
-        function noShareApp() {
+    function noShareApp() {
         $('#share').modal('show');
     }
     async function shareMyApp() {
@@ -1165,7 +1165,7 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#them").hide();
         $("#brady").hide();
         $("#vids").hide();
-        $("#bookVideo").hide();
+        //$("#bookVideo").hide();
         $("#recordCall").hide();
 
 
