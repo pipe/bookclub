@@ -663,6 +663,10 @@ function candyProt(candy){
 
     function stopCall(){
         $("#status").text("Call ended.");
+		if (recorder)
+		{
+		 recorder.stop();
+		 }
         document.location = "thanks.html";
     }
 
