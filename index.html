@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Bookclub session</title>
+    <title>Guided Meditation</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -9,23 +9,10 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="css/styles.css">
 
     <style>
-        body {
-            background-image: url("fhp2.jpeg");
-            background-color: #cccccc;
-            background-position: center;
-            background-size: cover;
-            background-repeat: no-repeat;
-        }
-        .footer {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            color: white;
-            text-align: center;
-        }
+        
     </style>
 
 </head>
@@ -35,7 +22,7 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
-<a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
+<a href="index.html"><h1 id="title" class="text-center">Guided Meditation</h1></a>
 <div class="container">
     <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
     <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
@@ -45,7 +32,10 @@
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
-        </div>
+            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
+                Record Call
+            </button>
+		</div>
 </div>
 
 <div id="share" class="modal" tabindex="-1" role="dialog">
@@ -171,6 +161,10 @@ var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToRece
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
+var recorder;
+var chunks = [];
+var saved = false;
+var startRecTime = 0;
 //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
@@ -755,6 +749,7 @@ function setupAudio() {
                     localpanned.pan.value = 0.0;
                     console.log("local stream panned to 0.0 ");
                     localsrc.connect(localpanned);
+					$("#recordCall").show();
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
                     if (pc.addTrack) {
@@ -810,6 +805,59 @@ function accepted() {
         startCall(cid)
     });
 }
+
+function repaintDuration(){
+        var diff = Date.now() - startRecTime;
+        console.log ("data on at "+diff);
+        var mins = Math.floor(diff / 60000);
+        var secs = Math.floor((diff % 60000) / 1000);
+        $("#recordCall").text(""+mins+":"+secs);
+    }
+
+    function recordCall() {
+        if (!recorder) {
+            startRecTime = Date.now();
+            var recStream = myac.createMediaStreamDestination();
+            recorder = new MediaRecorder(recStream.stream);
+            localpanned.connect(recStream);
+            localdcomp.connect(recStream);
+            recorder.ondataavailable = function (evt) {
+                chunks.push(evt.data);
+                repaintDuration();
+            };
+            recorder.onstop = function (evt) {
+                // Make blob out of our blobs, and open it.
+                var blob = new Blob(chunks, {'type': 'audio/ogg; codecs=opus'});
+                saveData(blob)
+            };
+            recorder.start(10000);
+            repaintDuration();
+            saved = false;
+            window.onbeforeunload = function() {
+                return !saved ? "If you leave this page you will lose the recording." : null;
+            }
+        } else {
+            recorder.stop();
+            recorder = null;
+        }
+    }
+    function saveData(blob) {
+        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.webm';
+
+        console.log("Save data ?");
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        console.log("saving wav blob as " + fileName);
+        var burl = window.URL.createObjectURL(blob);
+        a.href = burl;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(burl);
+        saved = true;
+        $("#status").text("Call saved as "+fileName);
+    }
+
 // decide who we are initiator or recpient.
 // notice that the actual call goes in the reverse direction
 // the recipient of the invite actually creates the audiobearing peerconnection
@@ -931,10 +979,12 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#chosenAction").hide();
         $("#packetLoss").hide();
         $("#statsZone").hide();
+		$("#recordCall").hide();
+		
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
         document.getElementById("me").onclick = toggleplay;
-
+        document.getElementById("recordCall").onclick = recordCall;
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));

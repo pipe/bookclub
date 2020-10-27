@@ -1,0 +1,18 @@
+body {
+background-image: url("images/meditate.jpg");
+background-color: #cccccc;
+background-position: center;
+background-size: cover;
+background-repeat: no-repeat;
+}
+
+.footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            color: white;
+            text-align: center;
+        }
+	
+	
