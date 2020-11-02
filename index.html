@@ -32,9 +32,11 @@
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
+			<button id="muteall" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteallIcon" class="fa fa-exchange fa-2x" aria-hidden="true"></i></button>
             <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
                 Record Call
             </button>
+			
 		</div>
 </div>
 
@@ -47,7 +49,7 @@
             <div class="modal-body" id="shareQR">
                 <p>Share this URL to start a session</p>
                 <p>You can use the share icon at the top of the screen</p>
-                <p>Then email/sms it to each of the book club members</p>
+                <p>Then email/sms it to each of the  members</p>
                 <p>Then press 'done'</p>
             </div>
             <div class="modal-footer">
@@ -60,10 +62,10 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Accept a book club session</h5>
+                <h5 class="modal-title">Accept a Meditation session</h5>
             </div>
             <div class="modal-body">
-                <p>Click 'accept' to start the call.</p>
+                <p>Click 'accept' to Enter Meditation.</p>
                 <p>You also need to permit access to your microphone</p>
             </div>
             <div class="modal-footer">
@@ -160,6 +162,7 @@ var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
+var mutepermanet = false;
 var isChrome = ("chrome" in window);
 var recorder;
 var chunks = [];
@@ -597,6 +600,15 @@ function messageDeal(event){
                 session.answerDeal(data);
             }
             break;
+			
+			case "muteall":
+            if (!initiator){
+             mutepermanet = !mutepermanet;
+             setMute(!mute);
+             		 
+            }
+            break;
+			
         case "candidate":
             if (session) {
                 session.candidateDeal(data);
@@ -697,6 +709,11 @@ function candyProt(candy){
 
     // mute management
     function setMute(m){
+	   if( (mutepermanet) &&  (!initiator) && (mute))
+	   {
+	    console.log('cant unmute');
+		return
+	    }
         var mi = $("#muteIcon");
         mute = m;
         if (m){
@@ -708,9 +725,28 @@ function candyProt(candy){
         }
         var audioTracks = localStream.getAudioTracks();
         if (audioTracks[0]) {
+		
+		
             audioTracks[0].enabled = !m;
+			
         }
     }
+	
+	function muteall()
+	{
+	  if(initiator)
+	  {
+	   console.log("session",sessions );
+	   var sess ;
+	   for (sess in sessions)
+	     {
+	     //console.log("sessionfid", sessions[sess]);
+	     sendMessage(sessions[sess].fid, mid , "muteall" , true);
+	  }
+	      
+	  }
+	
+	}
 /*
     function repaintDuration(){
         var diff = Date.now() - startRecTime;
@@ -754,6 +790,8 @@ function setupAudio() {
                     console.log("local stream panned to 0.0 ");
                     localsrc.connect(localpanned);
 					$("#recordCall").show();
+					$("#muteall").show();
+					
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
                     if (pc.addTrack) {
@@ -820,6 +858,7 @@ function repaintDuration(){
 
     function recordCall() {
         if (!recorder) {
+		    muteall();
             startRecTime = Date.now();
             var recStream = myac.createMediaStreamDestination();
             recorder = new MediaRecorder(recStream.stream);
@@ -832,6 +871,8 @@ function repaintDuration(){
             recorder.onstop = function (evt) {
                 // Make blob out of our blobs, and open it.
                 var blob = new Blob(chunks, {'type': 'audio/ogg; codecs=opus'});
+				// unmute automatically
+				muteall();
                 saveData(blob)
             };
             recorder.start(10000);
@@ -984,12 +1025,14 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#packetLoss").hide();
         $("#statsZone").hide();
 		$("#recordCall").hide();
+		$("#muteall").hide();
 		
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
         document.getElementById("me").onclick = toggleplay;
         document.getElementById("recordCall").onclick = recordCall;
-
+        document.getElementById("muteall").onclick = muteall;
+		
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));
             setRole();
