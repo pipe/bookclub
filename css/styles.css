@@ -1,9 +1,14 @@
 body {
 background-image: url("images/meditate.jpg");
 background-color: #cccccc;
-
+color: #fff;
 background-size: cover;
 background-repeat: no-repeat;
+}
+
+.logo img{
+width:150px;
+padding: 8px;	
 }
 
 .footer {
@@ -15,4 +20,19 @@ background-repeat: no-repeat;
             text-align: center;
         }
 	
-	
+.badge-primary
+{
+background:none;
+
+}
+
+.lefter
+{
+padding: 8px;	
+}
+
+.modal.show
+{
+color:#000;	
+}	
+

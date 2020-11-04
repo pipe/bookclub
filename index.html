@@ -22,34 +22,35 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
-<a href="index.html"><h1 id="title" class="text-center">Guided Meditation</h1></a>
-<div class="container">
-    <h2>Role:  <span class="badge badge-primary" id="role"></span></h2>
-    <h2>Status: <span class="badge badge-primary" id="status"></span></h2>
-    <div style="width: 80px; height: 80px;" id="me">me</div>
+<!-- <a href="index.html"><h1 id="title" class="text-center">Guided Meditation</h1></a> -->
+<div class="container-fluid">
+ <div class ="row">
+ <div class="col-sm-3">
+  <div class = "logo">
+  <img src="images/logo.png" alt= "rendezvous"> 
+  </div>
+ </div>
+ <div class = "col-sm-6">
+ </div>
+  <div class="col-sm-3 lefter">
+    <div class = "role" style= "display:none" >Role:  <span class="badge badge-primary" id="role"></span></div>
+    <div><span  id="status"></span></div>
+    <div style="width: 80px; height: 80px; display:none" id="me">me</div> 
+	</div>
+ </div>
 </div>
-<div class="container">
-        <div id="chosenAction" class="row justify-content-around">
-            <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
-            <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
-			<button id="muteall" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteallIcon" class="fa fa-exchange fa-2x" aria-hidden="true"></i></button>
-            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
-                Record Call
-            </button>
-			
-		</div>
-</div>
+
 
 <div id="share" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Send this url to the members. </h5>
+                <h5 class="modal-title">SEND THIS URL TO THE MEMBERS </h5>
             </div>
             <div class="modal-body" id="shareQR">
                 <p>Share this URL to start a session</p>
                 <p>You can use the share icon at the top of the screen</p>
-                <p>Then email/sms it to each of the  members</p>
+                <p>Then email/sms it to each of the  particiapants</p>
                 <p>Then press 'done'</p>
             </div>
             <div class="modal-footer">
@@ -62,10 +63,10 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Accept a Meditation session</h5>
+                <h5 class="modal-title">JOIN A MEDITATION SESSION </h5>
             </div>
             <div class="modal-body">
-                <p>Click 'accept' to Enter Meditation.</p>
+                <p>Click 'accept' to join the Meditation.</p>
                 <p>You also need to permit access to your microphone</p>
             </div>
             <div class="modal-footer">
@@ -107,8 +108,22 @@
         </div>
     </div>
 </div>
-<div id="remotes" class="container-fluid footer" >
-    <div class="row no-gutters" >
+<div class ="container-fluid  footer">
+<div class="container">
+        <div id="chosenAction" class="row justify-content-around">
+            <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
+            <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
+			<button id="muteall" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteallIcon" class="fa fa-exchange fa-2x" aria-hidden="true"></i></button>
+            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
+                Record Call
+            </button>
+			
+		</div>
+</div>
+<div id="remotes" style = "display:none">
+    
+	
+	<div class="row no-gutters"  >
         <div class="col" id="-0.8"></div>
         <div class="col" id="-0.6"></div>
         <div class="col" id="-0.4"></div>
@@ -120,10 +135,19 @@
         <div class="col" id="0.8"></div>
     </div>
 </div>
+</div >
 <video id="them" style="display: none" autoplay playsinline > </video>
 <!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
 </video-->
+<audio  loop src="beachsounds.mp3" autostart="false" width="0" height="0" id="sea" >
+
+
+ <!--<audio  loop ="true" autoplay = "true" >
+  <source src="Record_20201101_Beach sounds.m4a" type="audio/ogg">
+  <source src="Rcord_20201101_Beach sounds.m4a" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio> -->
 <script type="module">
     import Robohash from './robohash/robohash.min.js';
 
@@ -297,7 +321,7 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
+    $("#status").text("Online: "+ Object.keys(sessions).length + "Participants");
 };
 Session.prototype.setupRTC = function(){
     console.log("setting up webRTC for "+this.fid);
@@ -414,7 +438,7 @@ Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
         kind = "audio/video";
     }
-    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
+    $("#status").text("Online : "+ Object.keys(sessions).length + " Participants");
     console.log("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
@@ -703,7 +727,7 @@ function candyProt(candy){
         } else {
             console.log("missing action");
         }
-        $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
+        $("#status").text("Online: connected to "+ Object.keys(sessions).length + "participant(s)");
 
     }
 
@@ -836,7 +860,11 @@ function shared() {
     setupRTC();
     setupAudio().then(_ => {
         console.log("ready for offer");
-        $("#status").text("Waiting for guests.");
+        $("#status").text("Offline:");
+		var seabreeze = document.getElementById("sea");
+		seabreeze.play();
+		seabreeze.volume = 0.01;
+        
     });
 }
 function accepted() {
@@ -844,7 +872,11 @@ function accepted() {
     setupAudio().then(_ => {
         console.log("ready for offer");
         $("#status").text("Mic available");
-        startCall(cid)
+        startCall(cid);
+		var seabreeze = document.getElementById("sea");
+		seabreeze.volume = 0.1;
+		seabreeze.play();
+		
     });
 }
 
@@ -1039,6 +1071,8 @@ function _addSourceToVideo(element, type, dataURI) {
         } else {
             $('#nowebrtc').modal('show');
         }
+		
+       
     });
 </script>
 </body>
