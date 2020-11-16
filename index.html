@@ -22,6 +22,7 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
 <!-- <a href="index.html"><h1 id="title" class="text-center">Guided Meditation</h1></a> -->
 <div class="container-fluid">
  <div class ="row">
@@ -34,7 +35,14 @@
  </div>
   <div class="col-sm-3 lefter">
     <div class = "role" style= "display:none" >Role:  <span class="badge badge-primary" id="role"></span></div>
-    <div><span  id="status"></span></div>
+	
+    <span  id="status" class= "topicons"></span>
+	
+	<span id="mutep"  class="pmute topicons" title="mute your microphone"><a href="#" id ="muteimage" >  <img src="images/icons/RM_Layout-25.png"   height="50" > </a>
+	<i id="muteIcon2" class="microphone" aria-hidden="true" title="mute"></i></span>
+   
+	<span id="stopp"   title="End Call"> <img src="images/icons/RM_Layout-26.png" height="50">  <i id="stopIcon2" class="stop" aria-hidden="true"></i></span>
+	</div>
     <div style="width: 80px; height: 80px; display:none" id="me">me</div> 
 	</div>
  </div>
@@ -109,32 +117,48 @@
     </div>
 </div>
 <div class ="container-fluid  footer">
-<div class="container">
-        <div id="chosenAction" class="row justify-content-around">
-            <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
-            <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
-			<button id="muteall" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteallIcon" class="fa fa-exchange fa-2x" aria-hidden="true"></i></button>
-            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
-                Record Call
-            </button>
-			
-		</div>
+<div class="row">
+<div id="remotes" class="col-4"> 
+<div class=" no-gutters" >
+<div class="personicon" id="-0.8"  style = "display:none" >
+<img src = "images/icons/RM_Layout-14.png">
 </div>
-<div id="remotes" style = "display:none">
+        <div class="personicon" id="-0.6" style = "display:none"><img src = "images/icons/RM_Layout-15.png"> </div>
+        <div class="personicon" id="-0.4" style = "display:none"><img src = "images/icons/RM_Layout-16.png"> </div>
+        <div class="personicon" id="-0.2" style = "display:none"> <img src = "images/icons/RM_Layout-17.png"> </div>
+</div>
+</div>
+
+
+        <div id="chosenAction" class="justify-content-around col">
+            
+             <div id="mute" type="button" class="btn" title="mute your microphone">&nbsp; &nbsp; &nbsp; &nbsp;  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
+            <div id="stopCall" type="button" class="btn" title="End Call">&nbsp; &nbsp; &nbsp; &nbsp; <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
+			<div id="muteall" type="button" class="btn " title="Mute Group">&nbsp; &nbsp; &nbsp; &nbsp;  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
+            <div id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
+                Record Call
+            </div>
+			<div class="personicon" id="0" style = "display:none" >
+			<img src = "images/icons/RM_Layout-18.png">
+			</div>
+		</div>
+
+<div class="col-4">
+<div id="remotesz" >
     
 	
-	<div class="row no-gutters"  >
-        <div class="col" id="-0.8"></div>
-        <div class="col" id="-0.6"></div>
-        <div class="col" id="-0.4"></div>
-        <div class="col" id="-0.2"></div>
-        <div class="col" id="0"></div>
-        <div class="col" id="0.2"></div>
-        <div class="col" id="0.4"></div>
-        <div class="col" id="0.6"></div>
-        <div class="col" id="0.8"></div>
+	<div class="no-gutters" >
+        
+       
+        <div class="personicon" id="0.2" style = "display:none"> <img src = "images/icons/RM_Layout-19.png"></div>
+        <div class="personicon" id="0.4" style = "display:none"> <img src = "images/icons/RM_Layout-20.png"></div>
+        <div class="personicon" id="0.6" style = "display:none"><img src = "images/icons/RM_Layout-21.png"> </div>
+        <div class="personicon" id="0.8" style = "display:none"><img src = "images/icons/RM_Layout-22.png"> </div>
     </div>
 </div>
+</div >
+
+</div >
 </div >
 <video id="them" style="display: none" autoplay playsinline > </video>
 <!--video id="nosleep" width="1" playsinline muted>
@@ -192,10 +216,48 @@ var recorder;
 var chunks = [];
 var saved = false;
 var startRecTime = 0;
+var participants = 0;
 //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
 var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
+
+function participantshow (participants)
+{
+switch (participants) {
+        case "1":
+		$("#0.2").show();
+		break;
+		
+		case "2":
+		$("#-0.2").show();
+		break;
+		
+		case "3":
+		$("#0.4").show();
+		break;
+		
+		case "4":
+		$("#-0.4").show();
+		break;
+		
+		case "5":
+		$("#0.6").show();
+		break;
+		
+		case "6":
+		$("#-0.6").show();
+		break;
+		
+		case "7":
+		$("#0.8").show();
+		break;
+		
+		case "8":
+		$("#-0.8").show();
+		break;
+}
+}
 
 function Session(id,lpan) {
     this.checker = null;
@@ -221,6 +283,10 @@ function Session(id,lpan) {
         console.log("dummy entry for " + id );
     }
     console.log("pan is " + this.pan);
+	document.getElementById(+ this.pan).style.display = "inline-block";
+	
+	//$("#"+this.pan).show();
+	//alert('wtf');
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
     if (initiator && isChrome) {
@@ -231,7 +297,13 @@ function Session(id,lpan) {
         this.rdiv.appendChild(this.audio);
         this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
     }
-    Robohash.render(this.fid,this.rdiv);
+	//const image = document.createElement('img'+this.pan);
+	//image.src  = showImage();
+	 //this.rdiv.appendChild(image);
+
+    //Robohash.render(this.fid,this.rdiv);
+	
+	
     remoteslot.appendChild(this.rdiv);
 };
 Session.prototype.offerDeal = function (data) {
@@ -265,6 +337,7 @@ Session.prototype.candidateDeal = function(data){
 };
 Session.prototype.stopSession = function() {
     console.log("removing " + this.fid);
+	document.getElementById(+ this.pan).style.display = "none";
     delete sessions[this.fid];
 
     var that = this;
@@ -321,8 +394,9 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    $("#status").text("Online: "+ Object.keys(sessions).length + "Participants");
+    $("#status").text("Online: "+ Object.keys(sessions).length + " Participants");
 };
+
 Session.prototype.setupRTC = function(){
     console.log("setting up webRTC for "+this.fid);
     this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
@@ -439,6 +513,7 @@ Session.prototype.addStream = function(stream,kind) {
         kind = "audio/video";
     }
     $("#status").text("Online : "+ Object.keys(sessions).length + " Participants");
+	
     console.log("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
@@ -633,6 +708,13 @@ function messageDeal(event){
             }
             break;
 			
+			//case "newparticipants":
+           // participants = (participants + 1);
+			//participantshow (participants);
+             		 
+            
+            //break;
+			
         case "candidate":
             if (session) {
                 session.candidateDeal(data);
@@ -715,7 +797,10 @@ function candyProt(candy){
                     var sess = new Session(mo.fid, mo.pan);
                     console.log("adding user " + mo.fid);
                     sessions[mo.fid] = sess;
+					participants = (participants + 1);
+			       participantshow (participants);
                 }
+			
             }
             if (mo.act =="del"){
                 console.log("delete user "+mo.fid);
@@ -723,11 +808,13 @@ function candyProt(candy){
                 if (sess){
                     sess.stopSession();
                 }
+				participants = (participants - 1);
             }
         } else {
             console.log("missing action");
         }
-        $("#status").text("Online: connected to "+ Object.keys(sessions).length + "participant(s)");
+		//var lenp = (Object.keys(sessions).length -1);
+        $("#status").text("Online:  "+ Object.keys(sessions).length + " participant(s)");
 
     }
 
@@ -738,7 +825,15 @@ function candyProt(candy){
 	    console.log('cant unmute');
 		return
 	    }
+		
+		if(initiator)
+		{
         var mi = $("#muteIcon");
+		}
+		else 
+		{
+		var mi = $("#mutep");
+		}
         mute = m;
         if (m){
             mi.removeClass("fa-microphone");
@@ -815,6 +910,8 @@ function setupAudio() {
                     localsrc.connect(localpanned);
 					$("#recordCall").show();
 					$("#muteall").show();
+					$("#mute").show();
+					$("#stopCall").show();
 					
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
@@ -876,7 +973,7 @@ function accepted() {
 		var seabreeze = document.getElementById("sea");
 		seabreeze.volume = 0.1;
 		seabreeze.play();
-		
+		$("#0").show();
     });
 }
 
@@ -1035,6 +1132,7 @@ function _addSourceToVideo(element, type, dataURI) {
 
     // some housekeeping
 
+
     $.extend({
         getUrlVars: function(){
             var vars = [], hash;
@@ -1058,15 +1156,19 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#statsZone").hide();
 		$("#recordCall").hide();
 		$("#muteall").hide();
+		$("#stopCall").hide();
+		$("#mute").hide();
+		
 		
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
         document.getElementById("me").onclick = toggleplay;
         document.getElementById("recordCall").onclick = recordCall;
         document.getElementById("muteall").onclick = muteall;
-		
+		 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));
+			$("#muteimage").click(_ => setMute(!mute));
             setRole();
         } else {
             $('#nowebrtc').modal('show');
