@@ -38,10 +38,10 @@
 	
     <span  id="status" class= "topicons"></span>
 	
-	<span id="mutep"  class="pmute topicons" title="mute your microphone"><a href="#" id ="muteimage" >  <img src="images/icons/RM_Layout-25.png"   height="50" > </a>
+	<span id="mutep" style = "display:none"  class="pmute topicons" title="mute your microphone"><a href="#" id ="muteimage" >  <img src="images/icons/speakeron.png" id = "ppmuter"  height="50" > </a>
 	<i id="muteIcon2" class="microphone" aria-hidden="true" title="mute"></i></span>
    
-	<span id="stopp"   title="End Call"> <img src="images/icons/RM_Layout-26.png" height="50">  <i id="stopIcon2" class="stop" aria-hidden="true"></i></span>
+	<span id="stopp" style = "display:none"  title="End Call"> <img src="images/icons/RM_Layout-26.png" height="50" id = "stopCallp">  <i id="stopIcon2" class="stop" aria-hidden="true"></i></span>
 	</div>
     <div style="width: 80px; height: 80px; display:none" id="me">me</div> 
 	</div>
@@ -76,6 +76,10 @@
             <div class="modal-body">
                 <p>Click 'accept' to join the Meditation.</p>
                 <p>You also need to permit access to your microphone</p>
+				<p> <a href ="https://pi.pe/privacy_policy/index.html">Privacy Policy </a>
+				</br>
+				<a href ="https://pi.pe/impressum/index.html">Impressum </a>
+				</p>
             </div>
             <div class="modal-footer">
                 <button id="callAccept" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
@@ -129,20 +133,22 @@
 </div>
 </div>
 
-
-        <div id="chosenAction" class="justify-content-around col">
-            
-             <div id="mute" type="button" class="btn" title="mute your microphone">&nbsp; &nbsp; &nbsp; &nbsp;  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
-            <div id="stopCall" type="button" class="btn" title="End Call">&nbsp; &nbsp; &nbsp; &nbsp; <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
-			<div id="muteall" type="button" class="btn " title="Mute Group">&nbsp; &nbsp; &nbsp; &nbsp;  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
-            <div id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
-                Record Call
+<div class = "col-4">
+        <div id="chosenAction" class="controls" style ="display:none">
+            <div   class="controlicon topicons" title="Mute Group"> <a id= "muteall" href="#"> <img id="muteallimge" src="images/icons/mutehead.png" height="50" > </a>  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
+             <div id="mutediv"  class="controlicon topicons" title="mute your microphone"><a id= "mute" href="#"> <img id="muteimge2" src="images/icons/speakeron.png" height="50" > </a>  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
+            <div  type="button" class="controlicon topicons" title="End Call"><a id= "stopCall" href="#"> <img id="stopimage" src="images/icons/RM_Layout-26.png" height="50"> </a> <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
+			
+            <div class= "controlicon" data-toggle="button" aria-pressed="false" 
+			utocomplete="off">
+               <a id= "recordCall" href="#"> <img id="recorder" src="images/icons/RM_Layout-27.png" height="50">
             </div>
+	</div>
 			<div class="personicon" id="0" style = "display:none" >
 			<img src = "images/icons/RM_Layout-18.png">
 			</div>
-		</div>
-
+		
+</div>
 <div class="col-4">
 <div id="remotesz" >
     
@@ -284,7 +290,10 @@ function Session(id,lpan) {
     }
     console.log("pan is " + this.pan);
 	document.getElementById(+ this.pan).style.display = "inline-block";
-	
+	if(initiator)
+	{
+	document.getElementById('0').style.display = "none";
+	}
 	//$("#"+this.pan).show();
 	//alert('wtf');
     this.rdiv = document.createElement("div");
@@ -460,7 +469,14 @@ Session.prototype.setupRTC = function(){
                         console.log("popping candidate off stash");
                         sendMessage(this.fid, mid, "candidate", can.candidate);
                     }
+					if (initiator)
+					{
                     var act = $("#stopCall");
+					}
+					else 
+					{
+					var act = $("#stopCallp");
+					}
                     act.click(_ => stopCall());
                     window.onbeforeunload = function () {
                         return this.pc!=null ? "If you leave this page you will end the connection." : null;
@@ -592,7 +608,9 @@ Session.prototype.addStream = function(stream,kind) {
         // audio together here.
         // depends on role
         console.log('Audio sample Rate is '+ myac.sampleRate);
+		if (initiator) {
         $("#chosenAction").show();
+		}
         $("#statsZone").show();
     }
 };
@@ -834,14 +852,52 @@ function candyProt(candy){
 		{
 		var mi = $("#mutep");
 		}
+		if ((!initiator ) && (!mute))
+		{
+		 var muteimage = document.getElementById("ppmuter");
+		  muteimage.src = "images/icons/RM_Layout-25.png";
+		  
+		}
+		
+		if ((!initiator ) && (mute))
+		{
+		 var muteimage = document.getElementById("ppmuter");
+		  muteimage.src = "images/icons/speakeron.png";
+		  
+		}
+		
+		if (initiator && !mute )
+		{
+		var muteimage = document.getElementById("muteimge2");
+		muteimage.src = "images/icons/RM_Layout-25.png";
+		
+		}
+		
+		if (initiator && mute )
+		{
+		var muteimage = document.getElementById("muteimge2");
+		muteimage.src = "images/icons/speakeron.png";
+		}
+		
+		if (mutepermanet)
+		{
+		 document.getElementById('muteall').style.backgroundColor = 'red' ;
+		}
+		else
+		if (mutepermanet)
+		{
+		 document.getElementById('muteall').style.backgroundColor = 'none' ;
+		}
+		
+		
         mute = m;
-        if (m){
-            mi.removeClass("fa-microphone");
-            mi.addClass("fa-microphone-slash");
-        } else {
-            mi.removeClass("fa-microphone-slash");
-            mi.addClass("fa-microphone");
-        }
+        //if (m){
+           // mi.removeClass("fa-microphone");
+          //  mi.addClass("fa-microphone-slash");
+        //} else {
+           // mi.removeClass("fa-microphone-slash");
+            //mi.addClass("fa-microphone");
+        //}
         var audioTracks = localStream.getAudioTracks();
         if (audioTracks[0]) {
 		
@@ -955,6 +1011,7 @@ function setupAudio() {
     }
 function shared() {
     setupRTC();
+	
     setupAudio().then(_ => {
         console.log("ready for offer");
         $("#status").text("Offline:");
@@ -975,6 +1032,8 @@ function accepted() {
 		seabreeze.play();
 		$("#0").show();
     });
+	$("#stopp").show();
+   $("#mutep").show();
 }
 
 function repaintDuration(){
@@ -1149,7 +1208,11 @@ function _addSourceToVideo(element, type, dataURI) {
             return $.getUrlVars()[name];
         }
     });
-
+	
+	$( "a" ).click(function( event ) {
+     event.preventDefault();
+	 });
+	 
     $( document ).ready( _ => {
         $("#chosenAction").hide();
         $("#packetLoss").hide();
@@ -1158,6 +1221,7 @@ function _addSourceToVideo(element, type, dataURI) {
 		$("#muteall").hide();
 		$("#stopCall").hide();
 		$("#mute").hide();
+		
 		
 		
         document.getElementById("callAccept").onclick = accepted;

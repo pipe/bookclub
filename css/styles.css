@@ -38,29 +38,7 @@ margin-top: 3%;
 color:#000;	
 }
 
-#mute
-{
-background-image: url("images/RM_Layout-27.png");	
-background-size: cover;
-background-repeat: no-repeat;
-z-index:1;
-}	
 
-#stopCall
-{
-background-image: url("images/RM_Layout-26.png");	
-z-index:1;
-background-size: cover;
-background-repeat: no-repeat;
-}
-
-#muteall
-{
-background-image: url("images/RM_Layout-25.png");	
-z-index:1;
-background-size: cover;
-background-repeat: no-repeat;
-}
 
 .topicons::after{
 content: "|";
@@ -116,4 +94,23 @@ display:inline-block;
 .personicon img
 {
 width:80px;	
+}
+
+.controlicon 
+{
+	display:inline-block;
+}
+
+.controlicon  img
+{
+height:80px;		
+}
+
+.controls
+{
+border: 1px solid #fff;
+border-radius:15px ;
+
+background: rgba(0, 0, 0, 0.1);
+	
 }
