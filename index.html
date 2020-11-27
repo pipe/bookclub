@@ -494,12 +494,13 @@ Session.prototype.setupRTC = function(){
             };
             var that = this;
             this.statusChannel.onmessage = (ev) => {
-                consolelog("got data on datachannel from " +that.fid);
-                /*var mess = JSON.parse(ev.data);
-                if (mess.id == that.fid){
-                    consolelog("setting image data");
-                    that.setImage(mess.img);
-                } */
+                //consolelog("got data on datachannel from " +that.fid+ " "+ev.data);
+                var mess = JSON.parse(ev.data);
+                if (mess.act === 'level'){
+                    if (mess.style){
+                        that.rdiv.parentNode.setAttribute("style", mess.style);
+                    }
+                }
             }
 
         };
@@ -621,23 +622,22 @@ Session.prototype.checkLoss = function(){
             function (rs) {
                 var style = "";
                 rs.forEach(function (d) {
-                    /*if (d.type === "inbound-rtp") {
+                    if (d.type === "inbound-rtp") {
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
-                        var colour = "grey";
                         if (lost > that.lastLoss) {
                             var diffl = lost - that.lastLoss;
                             var diffp = recvd - that.lastRecv;
                             var pct = Math.ceil(100.0 * diffl / diffp);
                             if (pct > 0) {
-                                colour = rgb(128 + pct, 128, 128);
+                                var colour = rgb(128 + pct, 128, 128);
+                                style += "background-color:" + colour + "; ";
                             }
                         }
                         that.lastLoss = lost;
                         that.lastRecv = recvd;
-                        style += "background-color:" + colour + "; ";
 
-                    }*/
+                    }
                     if (d.type === "track") {
                         that.audioLevel = d.audioLevel;
                         var bwidth = Math.floor((that.audioLevel * 10.0));
@@ -662,6 +662,11 @@ Session.prototype.checkLoss = function(){
                 );
                 that.rdiv.parentNode.setAttribute("style", style);
                 //consolelog("style ="+style);
+                if (!initiator){
+                    if ((that.statusChannel) && (that.statusChannel.readyState === 'open')){
+                        that.statusChannel.send(JSON.stringify({act: 'level',fid: that.fid, style:style }))
+                    }
+                }
 
             });
     }
@@ -684,7 +689,7 @@ function rgb
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=128000";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=64000";
             }
         }
         return (lines.join("\r\n"));
@@ -1159,8 +1164,9 @@ function repaintDuration(){
             };
             socket.onclose = (e) => {
                 consolelog(" websocket closed"+ e);
-                $("#status").text("Server problems ?");
-
+                if (initiator) {
+                    $("#status").text("Server problems ?");
+                }
             };
 
         }
