@@ -211,6 +211,7 @@ var myac;
 var initiator;
 var localStream;
 var localdcomp;
+var localmusic;
 var localpanned;
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
@@ -585,13 +586,7 @@ Session.prototype.addStream = function(stream,kind) {
 
             this.peerout = myac.createMediaStreamDestination();
             this.dcomp.connect(this.peerout);
-            // and add the sound of the sea...
-            const seaElement = document.getElementById('sea');
-            console.log("sea sound being added")
-            var seatrack = myac.createMediaElementSource(seaElement);
-            const seagain = myac.createGain();
-            seagain.gain.value = 0.3
-            seatrack.connect(seagain).connect(this.peerout);
+            localmusic.connect(this.peerout);
 
             var pc = this.pc;
             var pstream = this.peerout.stream;
@@ -957,6 +952,8 @@ function setupAudio() {
         localdcomp.connect(dests);
         // set up play....
         //console.log("local dcomp connected ");
+        console.log("sea sound being added")
+
         var seaEl = document.createElement('audio');
         seaEl.setAttribute("src","beachsounds.m4a");
         seaEl.setAttribute("loop",true);
@@ -965,8 +962,12 @@ function setupAudio() {
 
         document.getElementById("them").srcObject = dests.stream;
         document.getElementById("them").play();
+        // and add the sound of the sea...
+        var seatrack = myac.createMediaElementSource(seaEl);
+        localmusic = myac.createGain();
+        localmusic.gain.value = 0.3
+        seatrack.connect(localmusic)
         seaEl.play();
-
     }
 
     var promise = new Promise(function (resolve, reject) {
