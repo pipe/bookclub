@@ -625,7 +625,7 @@ Session.prototype.checkLoss = function(){
             function (rs) {
                 var style = "";
                 rs.forEach(function (d) {
-                    if (d.type === "inbound-rtp") {
+                    /*if (d.type === "inbound-rtp") {
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
                         var colour = "grey";
@@ -641,7 +641,7 @@ Session.prototype.checkLoss = function(){
                         that.lastRecv = recvd;
                         style += "background-color:" + colour + "; ";
 
-                    }
+                    }*/
                     if (d.type === "track") {
                         that.audioLevel = d.audioLevel;
                         var bwidth = Math.floor((that.audioLevel * 10.0));
@@ -653,7 +653,7 @@ Session.prototype.checkLoss = function(){
                         //console.log("bwidth ="+bwidth);
                     }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
-                        $("#delay").text(""+d.currentRoundTripTime);
+                        console.log("rtt for " +that.pan+" is "+d.currentRoundTripTime);
                     }
                     if (d.type === "remote-candidate"){
                         $("#remote").text(d.candidateType);
@@ -664,7 +664,7 @@ Session.prototype.checkLoss = function(){
                 }
 
                 );
-                that.rdiv.setAttribute("style", style);
+                that.rdiv.parentNode.setAttribute("style", style);
                 //console.log("style ="+style);
 
             });
