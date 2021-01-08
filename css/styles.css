@@ -7,7 +7,7 @@ background-repeat: no-repeat;
 }
 
 .logo img{
-width:100px;
+width:120px;
 padding: 8px;
 margin-top: 15%;	
 }
@@ -29,7 +29,7 @@ background:none;
 
 .lefter
 {
-padding: 8px;
+padding-top: 10px;
 margin-top: 3%;	
 }
 
@@ -114,3 +114,55 @@ border-radius:15px ;
 background: rgba(0, 0, 0, 0.1);
 	
 }
+
+.btn-secondary {
+    color: #fff;
+    background-color: #9CBBCE;
+    border-rodius: 15px;
+    border-radius: 12px;
+	border-color: #9CBBCE;
+	min-width: 120px;
+}
+
+.modal-footer {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-align: center;
+    align-items: center;
+    -ms-flex-pack: end;
+    justify-content: center;
+    padding: 15px;
+    border-top: 0px solid #e9ecef;
+    text-align: center;
+}
+
+.modal-header {
+    
+    justify-content:center;
+    padding: 15px;
+    border-bottom: 0px solid #e9ecef;
+    border-top-left-radius: .3rem;
+    border-top-right-radius: .3rem;
+}
+
+.modal-title {
+    margin-bottom: 0;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.modal-body {
+    position: relative;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    padding: 15px;
+    text-align: center;
+}
+
+.bfooter
+{
+display:block;
+text-align: center;
+ padding: 15px;	
+}
+

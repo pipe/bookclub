@@ -47,18 +47,22 @@
 	</div>
  </div>
 </div>
+<video id="out" style="display:none;"  autoplay playsinline > </video>
+<video id="them" style="display:none;"  autoplay playsinline > </video>
+
+
 
 
 <div id="share" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">SEND THIS URL TO THE MEMBERS </h5>
+                <h5 class="modal-title">SEND THIS URL TO THE STUDENTS </h5>
             </div>
             <div class="modal-body" id="shareQR">
-                <p>Share this URL to start a session</p>
+                <p><strong>Share this URL to start a session </strong></p>
                 <p>You can use the share icon at the top of the screen</p>
-                <p>Then email/sms it to each of the  particiapants</p>
+                <p>Then email/text it to each of the  students</p>
                 <p>Then press 'done'</p>
             </div>
             <div class="modal-footer">
@@ -74,16 +78,16 @@
                 <h5 class="modal-title">JOIN A MEDITATION SESSION </h5>
             </div>
             <div class="modal-body">
-                <p>Click 'accept' to join the Meditation.</p>
+                <p>Click 'Accept' to join the Meditation.</p>
                 <p>You also need to permit access to your microphone</p>
-				<p> <a href ="https://pi.pe/privacy_policy/index.html">Privacy Policy </a>
-				</br>
-				<a href ="https://pi.pe/impressum/index.html">Impressum </a>
-				</p>
+				
             </div>
             <div class="modal-footer">
                 <button id="callAccept" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
+				</br>
+				
             </div>
+			
         </div>
     </div>
 </div>
@@ -135,7 +139,7 @@
 
 <div class = "col-4">
         <div id="chosenAction" class="controls" style ="display:none">
-            <div   class="controlicon topicons" title="Mute Group"> <a id= "muteall" href="#"> <img id="muteallimge" src="images/icons/mutehead.png" height="50" > </a>  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
+            <div   class="controlicon topicons" title="Mute Group"> <a id= "muteall" href="#"> <img id="muteallimge" src="images/icons/muteheadoff.png" height="50" > </a>  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
              <div id="mutediv"  class="controlicon topicons" title="mute your microphone"><a id= "mute" href="#"> <img id="muteimge2" src="images/icons/speakeron.png" height="50" > </a>  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
             <div  type="button" class="controlicon topicons" title="End Call"><a id= "stopCall" href="#"> <img id="stopimage" src="images/icons/RM_Layout-26.png" height="50"> </a> <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
 			
@@ -166,11 +170,11 @@
 
 </div >
 </div >
-<video id="them" style="display: none" autoplay playsinline > </video>
+
 <!--video id="nosleep" width="1" playsinline muted>
     Antisleep video.
 </video-->
-<audio  loop src="beachsounds.mp3" autostart="false" width="0" height="0" id="sea" >
+<!--audio  loop src="beachsounds.m4a" width="0" height="0" id="sea" -->
 
 
  <!--<audio  loop ="true" autoplay = "true" >
@@ -179,8 +183,6 @@
   Your browser does not support the audio element.
 </audio> -->
 <script type="module">
-    import Robohash from './robohash/robohash.min.js';
-
     var properties = {
 websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
 };
@@ -211,9 +213,11 @@ var myac;
 var initiator;
 var localStream;
 var localdcomp;
+var localmusic;
+const video = document.querySelector('video');
 var localpanned;
 var mute = false;
-var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: false };
+var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var mutepermanet = false;
@@ -281,14 +285,14 @@ function Session(id,lpan) {
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
-        console.log("created peer connection for " + id);
+        consolelog("created peer connection for " + id);
         this.lcandyStash = [];
     } else {
         this.pc = null;
         this.pan = lpan;
-        console.log("dummy entry for " + id );
+        consolelog("dummy entry for " + id );
     }
-    console.log("pan is " + this.pan);
+    consolelog("pan is " + this.pan);
 	document.getElementById(+ this.pan).style.display = "inline-block";
 	if(initiator)
 	{
@@ -310,8 +314,6 @@ function Session(id,lpan) {
 	//image.src  = showImage();
 	 //this.rdiv.appendChild(image);
 
-    //Robohash.render(this.fid,this.rdiv);
-	
 	
     remoteslot.appendChild(this.rdiv);
 };
@@ -324,28 +326,28 @@ Session.prototype.offerDeal = function (data) {
                 sendMessage(this.fid, mid, "answer", ans.sdp)
             )
         })
-    ).catch((e) => console.log("set Remote offer error", e));
+    ).catch((e) => consolelog("set Remote offer error"+ e));
 };
 Session.prototype.answerDeal = function(data){
     this.pc.setRemoteDescription(data)
         .then( _ => {
             //$("#action").text("hangup");
         })
-        .catch(e => console.log("set Remote answer error", e) );
+        .catch(e => consolelog("set Remote answer error"+ e) );
 };
 Session.prototype.candidateDeal = function(data){
     var jc = {
         sdpMLineIndex: 0,
         candidate: data.sdp
     };
-    console.log("adding candidate ", jc);
+    consolelog("adding candidate ", jc);
     var nc = new RTCIceCandidate(jc);
     this.pc.addIceCandidate(nc)
-        .then( _ => console.log("added remote candidate"))
-        .catch((e) => console.log("couldn't add candidate ", e));
+        .then( _ => consolelog("added remote candidate"))
+        .catch((e) => consolelog("couldn't add candidate "+ e));
 };
 Session.prototype.stopSession = function() {
-    console.log("removing " + this.fid);
+    consolelog("removing " + this.fid);
 	document.getElementById(+ this.pan).style.display = "none";
     delete sessions[this.fid];
 
@@ -403,29 +405,29 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    $("#status").text("Online: "+ Object.keys(sessions).length + " Participants");
+    $("#status").text("Online: "+ Object.keys(sessions).length + " Student(s)");
 };
 
 Session.prototype.setupRTC = function(){
-    console.log("setting up webRTC for "+this.fid);
+    consolelog("setting up webRTC for "+this.fid);
     this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
     this.pc.onicecandidate = (e) => {
-            console.log("local ice candidate", e.candidate);
+            consolelog("local ice candidate"+ e.candidate);
             if (e.candidate != null) {
                 if (candyProt(e.candidate.candidate).toUpperCase()!="TCP") {
                     if (this.pc.signalingState == 'stable') {
                         sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
                     } else {
-                        console.log("stashing ice candidate");
+                        consolelog("stashing ice candidate");
                         this.lcandyStash.push(e.candidate);
                     }
                 } else {
-                    console.log("skip TCP candidates");
+                    consolelog("skip TCP candidates");
                 }
             }
         };
         this.pc.oniceconnectionstatechange = (e) => {
-            console.log("ice state is changed", this.pc.iceConnectionState);
+            consolelog("ice state is changed"+ this.pc.iceConnectionState);
             /*
              "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
              "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
@@ -447,14 +449,14 @@ Session.prototype.setupRTC = function(){
             // if so we use it
             this.pc.ontrack = (event) => {
                 var stream = event.streams[0];
-                console.log("got remote track ", event.track.kind);
+                consolelog("got remote track ", event.track.kind);
                 this.addStream(stream,event.track.kind);
             };
         } else {
             // if not we use add stream instead
             this.pc.onaddstream = (event) => {
                 var stream = event.stream;
-                console.log("got remote stream ", stream.kind);
+                consolelog("got remote stream ", stream.kind);
                 this.addStream(stream);
             }
         }
@@ -462,11 +464,11 @@ Session.prototype.setupRTC = function(){
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
         this.pc.onsignalingstatechange = (evt) => {
             if (this.pc != null) {
-                console.log("signalling state is ", this.pc.signalingState);
+                consolelog("signalling state is ", this.pc.signalingState);
                 if (this.pc.signalingState == 'stable') {
                     var can;
                     while (can = this.lcandyStash.pop()) {
-                        console.log("popping candidate off stash");
+                        consolelog("popping candidate off stash");
                         sendMessage(this.fid, mid, "candidate", can.candidate);
                     }
 					if (initiator)
@@ -485,24 +487,25 @@ Session.prototype.setupRTC = function(){
             }
         };
         this.pc.ondatachannel = (evt) => {
-            console.log("got new datachannel from " +this.fid);
+            consolelog("got new datachannel from " +this.fid);
             this.statusChannel = evt.channel;
-            console.log("got new datachannel from " +this.statusChannel.label);
+            consolelog("got new datachannel from " +this.statusChannel.label);
 
             this.statusChannel.onopen = (ev) => {
-                console.log("got open datachannel from " +this.fid);
+                consolelog("got open datachannel from " +this.fid);
                 that.tellAll();
                 // don't tell them about us.
                 // that.statusChannel.send(JSON.stringify({act: 'add', fid: cid, pan: "0"}));
             };
             var that = this;
             this.statusChannel.onmessage = (ev) => {
-                console.log("got data on datachannel from " +that.fid);
-                /*var mess = JSON.parse(ev.data);
-                if (mess.id == that.fid){
-                    console.log("setting image data");
-                    that.setImage(mess.img);
-                } */
+                //consolelog("got data on datachannel from " +that.fid+ " "+ev.data);
+                var mess = JSON.parse(ev.data);
+                if (mess.act === 'level'){
+                    if (mess.style){
+                        that.rdiv.parentNode.setAttribute("style", mess.style);
+                    }
+                }
             }
 
         };
@@ -520,7 +523,7 @@ Session.prototype.tellAll = function() {
                 session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan})); // I hear them
             }
         } else {
-            console.log("skip me " + id);
+            consolelog("skip me " + id);
         }
     });
 };
@@ -528,16 +531,16 @@ Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
         kind = "audio/video";
     }
-    $("#status").text("Online : "+ Object.keys(sessions).length + " Participants");
+    $("#status").text("Online : "+ Object.keys(sessions).length + " Student(s)");
 	
-    console.log("got new stream" + stream + " kind =" + kind);
+    consolelog("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
         if (initiator) {
             // inbound....
             this.peerin = myac.createMediaStreamSource(stream);
             this.panned = myac.createStereoPanner();
             this.panned.pan.value = this.pan;
-            console.log("panned to "+this.pan);
+            consolelog("panned to "+this.pan);
             this.peerin.connect(this.panned);
 
             // now connect panned to :
@@ -552,7 +555,7 @@ Session.prototype.addStream = function(stream,kind) {
             if (localdcomp != null) {
                 this.panned.connect(localdcomp);
             } else {
-                console.log("nowhere to plug "+this.fid);
+                consolelog("nowhere to plug "+this.fid);
             }
 
             var that = this;
@@ -563,7 +566,7 @@ Session.prototype.addStream = function(stream,kind) {
             this.dcomp = myac.createDynamicsCompressor();
             if (localpanned){
                 localpanned.connect(this.dcomp);
-                console.log("connect local stream to dcomp");
+                consolelog("connect local stream to dcomp");
             }
 
             Object.entries(sessions).forEach(sessionkva => {
@@ -577,7 +580,7 @@ Session.prototype.addStream = function(stream,kind) {
                         session.panned.connect(that.dcomp); // I hear them
                     }
                 } else {
-                    console.log("skip me "+id);
+                    consolelog("skip me "+id);
                 }
 
             });
@@ -585,20 +588,22 @@ Session.prototype.addStream = function(stream,kind) {
 
             this.peerout = myac.createMediaStreamDestination();
             this.dcomp.connect(this.peerout);
+            localmusic.connect(this.peerout);
+
             var pc = this.pc;
             var pstream = this.peerout.stream;
             if (pc.addTrack) {
                 pstream.getTracks().forEach(track => {
                     pc.addTrack(track, pstream);
-                    console.log("added panned outbound track ", track.id, track.kind);
+                    consolelog("added panned outbound track "+ track.id+" "+track.kind);
                 });
             } else {
                 pc.addStream(pstream);
-                console.log("added panned outbound stream");
+                consolelog("added panned outbound stream");
             }
         }  else {
             //startRecTime = Date.now();
-            console.log("added remote stream to audiotag");
+            consolelog("added remote stream to audiotag");
             document.getElementById("them").srcObject = stream;
         }
         var that = this;
@@ -607,11 +612,31 @@ Session.prototype.addStream = function(stream,kind) {
 
         // audio together here.
         // depends on role
-        console.log('Audio sample Rate is '+ myac.sampleRate);
+        consolelog('Audio sample Rate is '+ myac.sampleRate);
 		if (initiator) {
         $("#chosenAction").show();
 		}
         $("#statsZone").show();
+    }
+	
+	if (kind.indexOf("video") != -1) {
+        remoteStream = stream;
+        var mediaElement = document.getElementById('out');
+        
+        // Older browsers may not have srcObject
+        if ("srcObject" in mediaElement) {
+            mediaElement.srcObject = stream;
+        } else {
+            // Avoid using this in new browsers, as it is going away.
+            mediaElement.src = URL.createObjectURL(stream);
+        }
+        //mediaElement.muted = true;
+        console.log('Video stream');
+
+        mediaElement.onloadedmetadata = function (e) {
+            //mediaElement.play();
+            mediaElement.muted = true;
+        };
     }
 };
 
@@ -625,18 +650,17 @@ Session.prototype.checkLoss = function(){
                     if (d.type === "inbound-rtp") {
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
-                        var colour = "grey";
                         if (lost > that.lastLoss) {
                             var diffl = lost - that.lastLoss;
                             var diffp = recvd - that.lastRecv;
                             var pct = Math.ceil(100.0 * diffl / diffp);
                             if (pct > 0) {
-                                colour = rgb(128 + pct, 128, 128);
+                                var colour = rgb(128 + pct, 128, 128);
+                                style += "background-color:" + colour + "; ";
                             }
                         }
                         that.lastLoss = lost;
                         that.lastRecv = recvd;
-                        style += "background-color:" + colour + "; ";
 
                     }
                     if (d.type === "track") {
@@ -647,10 +671,10 @@ Session.prototype.checkLoss = function(){
                         } else {
                             style += " border-style:hidden; ";
                         }
-                        //console.log("bwidth ="+bwidth);
+                        //consolelog("bwidth ="+bwidth);
                     }
                     /*if ((d.type ==="candidate-pair")&&(d.nominated)){
-                        $("#delay").text(""+d.currentRoundTripTime);
+                        consolelog("rtt for " +that.pan+" is "+d.currentRoundTripTime);
                     }
                     if (d.type === "remote-candidate"){
                         $("#remote").text(d.candidateType);
@@ -661,8 +685,13 @@ Session.prototype.checkLoss = function(){
                 }
 
                 );
-                that.rdiv.setAttribute("style", style);
-                //console.log("style ="+style);
+                that.rdiv.parentNode.setAttribute("style", style);
+                //consolelog("style ="+style);
+                if (!initiator){
+                    if ((that.statusChannel) && (that.statusChannel.readyState === 'open')){
+                        that.statusChannel.send(JSON.stringify({act: 'level',fid: that.fid, style:style }))
+                    }
+                }
 
             });
     }
@@ -685,7 +714,7 @@ function rgb
         for (var i=0;i<lines.length;i++){
             var line = lines[i];
             if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=64000";
             }
         }
         return (lines.join("\r\n"));
@@ -693,9 +722,9 @@ function rgb
 
 
 function messageDeal(event){
-    //console.log("message is ", event.data);
+    //consolelog("message is ", event.data);
     var data = JSON.parse(event.data);
-    console.log("message data is ", data);
+    consolelog("message data is ", data);
     if (data.to != mid){
         alert("message mixup");
     }
@@ -709,7 +738,7 @@ function messageDeal(event){
             if (initiator){
                 session.offerDeal(data);
             } else {
-                console.log("huh? Guests send offers");
+                consolelog("huh? Guests send offers");
             }
             break;
         case "answer":
@@ -724,6 +753,11 @@ function messageDeal(event){
              setMute(!mute);
              		 
             }
+			else 
+			{
+			 mutepermanet = !mutepermanet;
+			 changemuteicon();
+			}
             break;
 			
 			//case "newparticipants":
@@ -737,7 +771,7 @@ function messageDeal(event){
             if (session) {
                 session.candidateDeal(data);
             } else {
-                console.log("should stash candidate for "+data.from);
+                consolelog("should stash candidate for "+data.from);
             }
             break;
     }
@@ -760,7 +794,7 @@ function candyProt(candy){
         };
 
         var message = JSON.stringify(messageJ);
-        console.log("sending ", messageJ);
+        consolelog("sending "+ message);
         socket.send(message);
     }
 
@@ -773,27 +807,27 @@ function candyProt(candy){
 
         that.statusChannel = pc.createDataChannel("status-"+Date.now());
         that.statusChannel.onopen = () => {
-            console.log("guest's status channel opened - sending ping");
+            consolelog("guest's status channel opened - sending ping");
             that.statusChannel.send(JSON.stringify({act:"ping",date:Date.now()}));
         };
         that.statusChannel.onclose = (e) => {
-            console.log("guest's status channel closed "+e);
+            consolelog("guest's status channel closed "+e);
         };
         that.statusChannel.onerror = (e) => {
-            console.log("guest's status channel errored "+e);
+            consolelog("guest's status channel errored "+e);
         };
-        console.log("created status datachannel");
+        consolelog("created status datachannel");
         that.statusChannel.onmessage = (evt) => {
             statusDeal(evt);
         };
         pc.createOffer(peerConnectionOfferAnswerCriteria)
             .then(desc => {
-                console.log("offer created",);
+                consolelog("offer created");
                 $("#status").text("Making call to host");
                 desc.sdp = tweakSDP(desc.sdp);
                 pc.setLocalDescription(desc).then( d => sendMessage(fid, mid, desc.type, desc.sdp));
             })
-            .catch(e => console.log("offer not created due to ", e) );
+            .catch(e => consolelog("offer not created due to "+ e) );
     }
 
 
@@ -807,13 +841,13 @@ function candyProt(candy){
     }
 
     function statusDeal(evt){
-        console.log("got message "+evt.data);
+        consolelog("got message "+evt.data);
         var mo = JSON.parse(evt.data);
         if (mo.act){
             if (mo.act =="add"){
                 if (!sessions[mo.fid]) {
                     var sess = new Session(mo.fid, mo.pan);
-                    console.log("adding user " + mo.fid);
+                    consolelog("adding user " + mo.fid);
                     sessions[mo.fid] = sess;
 					participants = (participants + 1);
 			       participantshow (participants);
@@ -821,7 +855,7 @@ function candyProt(candy){
 			
             }
             if (mo.act =="del"){
-                console.log("delete user "+mo.fid);
+                consolelog("delete user "+mo.fid);
                 var sess = sessions[mo.fid]
                 if (sess){
                     sess.stopSession();
@@ -829,18 +863,34 @@ function candyProt(candy){
 				participants = (participants - 1);
             }
         } else {
-            console.log("missing action");
+            consolelog("missing action");
         }
 		//var lenp = (Object.keys(sessions).length -1);
-        $("#status").text("Online:  "+ Object.keys(sessions).length + " participant(s)");
+        $("#status").text("Online:  "+ Object.keys(sessions).length + " Student(s)");
 
     }
+
+    function changemuteicon()
+	{
+	   if (!mutepermanet && initiator)
+		{
+		 var mutehead = document.getElementById('muteall');
+		mutehead.src = "images/icons/muteheadoff.png";
+		}
+		
+		if (mutepermanet && initiator)
+		{
+		var mutehead = document.getElementById('muteall');
+		mutehead.src = "images/icons/mutehead.png"
+		}
+	}
+
 
     // mute management
     function setMute(m){
 	   if( (mutepermanet) &&  (!initiator) && (mute))
 	   {
-	    console.log('cant unmute');
+	    consolelog('cant unmute');
 		return
 	    }
 		
@@ -879,15 +929,7 @@ function candyProt(candy){
 		muteimage.src = "images/icons/speakeron.png";
 		}
 		
-		if (mutepermanet)
-		{
-		 document.getElementById('muteall').style.backgroundColor = 'red' ;
-		}
-		else
-		if (mutepermanet)
-		{
-		 document.getElementById('muteall').style.backgroundColor = 'none' ;
-		}
+		
 		
 		
         mute = m;
@@ -911,11 +953,11 @@ function candyProt(candy){
 	{
 	  if(initiator)
 	  {
-	   console.log("session",sessions );
+	   consolelog("session" + sessions );
 	   var sess ;
 	   for (sess in sessions)
 	     {
-	     //console.log("sessionfid", sessions[sess]);
+	     //consolelog("sessionfid", sessions[sess]);
 	     sendMessage(sessions[sess].fid, mid , "muteall" , true);
 	  }
 	      
@@ -925,21 +967,48 @@ function candyProt(candy){
 /*
     function repaintDuration(){
         var diff = Date.now() - startRecTime;
-        console.log ("data on at "+diff);
+        consolelog ("data on at "+diff);
         var mins = Math.floor(diff / 60000);
         var secs = Math.floor((diff % 60000) / 1000);
         $("#duration").text(""+mins+":"+secs);
     }
 */
+function videoCapture() {
+    var video = document.getElementById("out");
+    var videoWidth = video.videoWidth,
+        videoHeight = video.videoHeight;
+    var canvas = document.getElementById('pauseOther');
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    var context = canvas.getContext('2d');
+    context.translate(canvas.width, 0);
 
+    // flip context horizontally
+    context.scale(-1, 1);
+
+    context.drawImage(
+        video, 0, 0, videoWidth, videoHeight
+    );
+
+    var img = new Image();
+    img.onload = function () {
+        context.drawImage(img, (videoWidth / 2) - 24, (videoHeight / 2) - 24);
+    }
+    img.src = "pause.svg";
+}
     // plumb the local audio together.
 function setupAudio() {
 
     myac = new AudioContext();
 
     //setNoSleep();
-    var gumConstraints = {audio: true, video: false};
-
+	if (initiator){
+	var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: true};
+	}
+	else
+	{
+    var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: false};
+    }
     // connect to our speakers
     if (initiator){
         // this works beautifully on firefox but fails in chrome
@@ -948,9 +1017,23 @@ function setupAudio() {
         var dests = myac.createMediaStreamDestination();
         localdcomp.connect(dests);
         // set up play....
-        //console.log("local dcomp connected ");
+        //consolelog("local dcomp connected ");
+        consolelog("sea sound being added")
+
+        var seaEl = document.createElement('audio');
+        seaEl.setAttribute("src","beachsounds.m4a");
+        seaEl.setAttribute("loop",true);
+        seaEl.setAttribute("id","sea");
+        document.body.appendChild(seaEl);
+
         document.getElementById("them").srcObject = dests.stream;
         document.getElementById("them").play();
+        // and add the sound of the sea...
+        var seatrack = myac.createMediaElementSource(seaEl);
+        localmusic = myac.createGain();
+        localmusic.gain.value = 0.3
+        seatrack.connect(localmusic)
+        seaEl.play();
     }
 
     var promise = new Promise(function (resolve, reject) {
@@ -960,10 +1043,13 @@ function setupAudio() {
                 // do magic pan stuff here....
                 if (initiator) {
                     var localsrc = myac.createMediaStreamSource(stream);
+					//video.srcObject = stream;
                     localpanned = myac.createStereoPanner();
                     localpanned.pan.value = 0.0;
-                    console.log("local stream panned to 0.0 ");
+                    consolelog("local stream panned to 0.0 ");
                     localsrc.connect(localpanned);
+
+
 					$("#recordCall").show();
 					$("#muteall").show();
 					$("#mute").show();
@@ -974,19 +1060,21 @@ function setupAudio() {
                     if (pc.addTrack) {
                         stream.getTracks().forEach(track => {
                             pc.addTrack(track, stream);
-                            console.log("added local track ", track.id, track.kind);
+                            consolelog("added local track "+ track.id+ " "+ track.kind);
                         });
                     } else {
                         pc.addStream(stream);
-                        console.log("added local stream");
+                        consolelog("added local stream");
                     }
                 }
                 resolve(false);
             })
             .catch((e) => {
-                console.log('getUserMedia() error:' + e);
+                consolelog('getUserMedia() error:' + e);
                 reject(e);
             });
+			
+			//video.play();
     });
     return promise;
 
@@ -1013,23 +1101,16 @@ function shared() {
     setupRTC();
 	
     setupAudio().then(_ => {
-        console.log("ready for offer");
+        consolelog("ready for offer");
         $("#status").text("Offline:");
-		var seabreeze = document.getElementById("sea");
-		seabreeze.play();
-		seabreeze.volume = 0.01;
-        
     });
 }
 function accepted() {
     setupRTC();
     setupAudio().then(_ => {
-        console.log("ready for offer");
+        consolelog("ready for offer");
         $("#status").text("Mic available");
         startCall(cid);
-		var seabreeze = document.getElementById("sea");
-		seabreeze.volume = 0.1;
-		seabreeze.play();
 		$("#0").show();
     });
 	$("#stopp").show();
@@ -1038,7 +1119,7 @@ function accepted() {
 
 function repaintDuration(){
         var diff = Date.now() - startRecTime;
-        console.log ("data on at "+diff);
+        consolelog ("data on at "+diff);
         var mins = Math.floor(diff / 60000);
         var secs = Math.floor((diff % 60000) / 1000);
         $("#recordCall").text(""+mins+":"+secs);
@@ -1077,11 +1158,11 @@ function repaintDuration(){
     function saveData(blob) {
         var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.webm';
 
-        console.log("Save data ?");
+        consolelog("Save data ?");
         var a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
-        console.log("saving wav blob as " + fileName);
+        consolelog("saving wav blob as " + fileName);
         var burl = window.URL.createObjectURL(blob);
         a.href = burl;
         a.download = fileName;
@@ -1089,6 +1170,7 @@ function repaintDuration(){
         window.URL.revokeObjectURL(burl);
         saved = true;
         $("#status").text("Call saved as "+fileName);
+        consoleSave();
     }
 
 // decide who we are initiator or recpient.
@@ -1117,7 +1199,7 @@ function repaintDuration(){
                 hexCodes.push(paddedValue);
             }
             mid = hexCodes.join("").toLowerCase();
-            console.log("mid =", mid);
+            consolelog("mid ="+ mid);
             localStorage['clubId'] = mid;
         }
         if (cid == null){
@@ -1129,7 +1211,7 @@ function repaintDuration(){
             socket.onmessage = messageDeal;
             socket.onopen = (_) => {
                 var url = document.location.href;
-                console.log("href = "+url);
+                consolelog("href = "+url);
 
                 initiator = (mid === cid);
 
@@ -1142,52 +1224,44 @@ function repaintDuration(){
                     smodal = initiator ? "#share" : "#accept";
                 }
                 $(smodal).modal('show');
-                Robohash.render(mid, document.getElementById("me"));
             };
             socket.onerror = (e) => {
-                console.log("can't open websocket", e);
+                consolelog("can't open websocket"+ e);
                 $("#status").text("Internet problems ?");
 
             };
             socket.onclose = (e) => {
-                console.log(" websocket closed", e);
-                $("#status").text("Server problems ?");
-
+                consolelog(" websocket closed"+ e);
+                if (initiator) {
+                    $("#status").text("Server problems ?");
+                }
             };
 
         }
     }
-/*
-function _addSourceToVideo(element, type, dataURI) {
-    var source = document.createElement('source');
-    source.src = dataURI;
-    source.type = 'video/' + type;
-    element.appendChild(source);
-}
-/* find the original at https://github.com/richtr/NoSleep.js/ */
-/* brutally butchered version of the above keeps the phone from sleeping becuase it sees a video playing...*/
-/*
-    function setNoSleep() {
-        var videoEl = document.getElementById("nosleep");
-        _addSourceToVideo(videoEl, 'webm', 'data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQI0VSalmQCgq17FAAw9CQE2AQAZ3aGFtbXlXQUAGd2hhbW15RIlACECPQAAAAAAAFlSua0AxrkAu14EBY8WBAZyBACK1nEADdW5khkAFVl9WUDglhohAA1ZQOIOBAeBABrCBCLqBCB9DtnVAIueBAKNAHIEAAIAwAQCdASoIAAgAAUAmJaQAA3AA/vz0AAA=');
-        _addSourceToVideo(videoEl, 'mp4', 'data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAACKBtZGF0AAAC8wYF///v3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjQ3OSBkZDc5YTYxIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTEgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MToweDExMSBtZT1oZXggc3VibWU9MiBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0wIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MCA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0wIHRocmVhZHM9NiBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTMgYl9weXJhbWlkPTIgYl9hZGFwdD0xIGJfYmlhcz0wIGRpcmVjdD0xIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MSBrZXlpbnQ9MzAwIGtleWludF9taW49MzAgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD0xMCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIwLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IHZidl9tYXhyYXRlPTIwMDAwIHZidl9idWZzaXplPTI1MDAwIGNyZl9tYXg9MC4wIG5hbF9ocmQ9bm9uZSBmaWxsZXI9MCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAOWWIhAA3//p+C7v8tDDSTjf97w55i3SbRPO4ZY+hkjD5hbkAkL3zpJ6h/LR1CAABzgB1kqqzUorlhQAAAAxBmiQYhn/+qZYADLgAAAAJQZ5CQhX/AAj5IQAD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');
-        videoEl.addEventListener('loadedmetadata', function () {
-            console.log("loaded metadata");
-            if (videoEl.duration <= 1) {
-                // webm source
-                videoEl.setAttribute('loop', '');
-            } else {
-                // mp4 source
-                videoEl.addEventListener('timeupdate', function () {
-                    if (videoEl.currentTime > 0.5) {
-                        videoEl.currentTime = Math.random();
-                    }
-                });
-            }
-        });
-        videoEl.play();
+
+    var consoleData = [];
+    function consolelog(text){
+        console.log(text);
+        if (initiator){
+            consoleData.push(""+Date.now()+ ":"+ text +"\n")
+        }
     }
-*/
+    function consoleSave(){
+        var blob = new Blob(consoleData, {'type': "text/plain"});
+        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.log';
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        console.log("saving wav blob as " + fileName);
+        var burl = window.URL.createObjectURL(blob);
+        a.href = burl;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(burl);
+        $("#status").text("Log saved as "+fileName);
+        consoleData = []
+    }
 
     // some housekeeping
 
@@ -1243,3 +1317,5 @@ function _addSourceToVideo(element, type, dataURI) {
 </script>
 </body>
 </html>
+
+    
