@@ -43,12 +43,17 @@
    
 	<span id="stopp" style = "display:none"  title="End Call"> <img src="images/icons/RM_Layout-26.png" height="50" id = "stopCallp">  <i id="stopIcon2" class="stop" aria-hidden="true"></i></span>
 	</div>
-    <div style="width: 80px; height: 80px; display:none" id="me">me</div> 
+
 	</div>
+
  </div>
+<div class="row" id="me">
+    <video id="teacher"   autoplay playsinline muted > </video>
+    <audio id="them" autoplay > </audio>
+
 </div>
-<video id="out" style="display:none;"  autoplay playsinline > </video>
-<video id="them" style="display:none;"  autoplay playsinline > </video>
+</div>
+
 
 
 
@@ -302,19 +307,13 @@ function Session(id,lpan) {
 	//alert('wtf');
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
-    if (initiator && isChrome) {
-        // add an audio tag per recipient because chrome needs some suckage on the pipe...
-        this.audio = document.createElement("audio");
-        this.audio.setAttribute("style","display: none;");
+    if (initiator) {
+        this.audio = document.createElement("video");
+        //this.audio.setAttribute("style","display: none;");
         this.audio.setAttribute("muted","muted");
         this.rdiv.appendChild(this.audio);
         this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
     }
-	//const image = document.createElement('img'+this.pan);
-	//image.src  = showImage();
-	 //this.rdiv.appendChild(image);
-
-	
     remoteslot.appendChild(this.rdiv);
 };
 Session.prototype.offerDeal = function (data) {
@@ -595,7 +594,11 @@ Session.prototype.addStream = function(stream,kind) {
             if (pc.addTrack) {
                 pstream.getTracks().forEach(track => {
                     pc.addTrack(track, pstream);
-                    consolelog("added panned outbound track "+ track.id+" "+track.kind);
+                    consolelog("added mixed outbound track "+ track.id+" "+track.kind);
+                });
+                localStream.getVideoTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                    consolelog("added teacher outbound track "+ track.id+" "+track.kind);
                 });
             } else {
                 pc.addStream(pstream);
@@ -620,23 +623,25 @@ Session.prototype.addStream = function(stream,kind) {
     }
 	
 	if (kind.indexOf("video") != -1) {
-        remoteStream = stream;
-        var mediaElement = document.getElementById('out');
-        
-        // Older browsers may not have srcObject
-        if ("srcObject" in mediaElement) {
+        if (initiator) {
+            var mediaElement = this.audio;
             mediaElement.srcObject = stream;
-        } else {
-            // Avoid using this in new browsers, as it is going away.
-            mediaElement.src = URL.createObjectURL(stream);
-        }
-        //mediaElement.muted = true;
-        console.log('Video stream');
+            console.log('Video stream for '+this.pan);
 
-        mediaElement.onloadedmetadata = function (e) {
-            //mediaElement.play();
-            mediaElement.muted = true;
-        };
+            mediaElement.onloadedmetadata = function (e) {
+                mediaElement.muted = true;
+                mediaElement.play();
+            };
+        } else {
+            var mediaElement = document.getElementById("teacher")
+            mediaElement.srcObject = stream;
+            console.log('Video stream for '+this.pan);
+
+            mediaElement.onloadedmetadata = function (e) {
+                mediaElement.muted = true;
+                mediaElement.play();
+            };
+        }
     }
 };
 
@@ -964,38 +969,7 @@ function candyProt(candy){
 	  }
 	
 	}
-/*
-    function repaintDuration(){
-        var diff = Date.now() - startRecTime;
-        consolelog ("data on at "+diff);
-        var mins = Math.floor(diff / 60000);
-        var secs = Math.floor((diff % 60000) / 1000);
-        $("#duration").text(""+mins+":"+secs);
-    }
-*/
-function videoCapture() {
-    var video = document.getElementById("out");
-    var videoWidth = video.videoWidth,
-        videoHeight = video.videoHeight;
-    var canvas = document.getElementById('pauseOther');
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
-    var context = canvas.getContext('2d');
-    context.translate(canvas.width, 0);
 
-    // flip context horizontally
-    context.scale(-1, 1);
-
-    context.drawImage(
-        video, 0, 0, videoWidth, videoHeight
-    );
-
-    var img = new Image();
-    img.onload = function () {
-        context.drawImage(img, (videoWidth / 2) - 24, (videoHeight / 2) - 24);
-    }
-    img.src = "pause.svg";
-}
     // plumb the local audio together.
 function setupAudio() {
 
@@ -1007,7 +981,7 @@ function setupAudio() {
 	}
 	else
 	{
-    var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: false};
+    var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: true};
     }
     // connect to our speakers
     if (initiator){
@@ -1040,6 +1014,8 @@ function setupAudio() {
         navigator.mediaDevices.getUserMedia(gumConstraints)
             .then((stream) => {
                 localStream = stream;
+                consolelog("setting localstream");
+
                 // do magic pan stuff here....
                 if (initiator) {
                     var localsrc = myac.createMediaStreamSource(stream);
@@ -1048,9 +1024,13 @@ function setupAudio() {
                     localpanned.pan.value = 0.0;
                     consolelog("local stream panned to 0.0 ");
                     localsrc.connect(localpanned);
+                    localStream.getVideoTracks().forEach(track => {
+                        consolelog("added local track "+ track.id+ " "+ track.kind);
+                        document.getElementById("teacher").srcObject = stream;
+                    });
 
 
-					$("#recordCall").show();
+                    $("#recordCall").show();
 					$("#muteall").show();
 					$("#mute").show();
 					$("#stopCall").show();
@@ -1156,7 +1136,7 @@ function repaintDuration(){
         }
     }
     function saveData(blob) {
-        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.webm';
+        var fileName = 'Rendezvous-yoga-'+new Date().toISOString() + '.webm';
 
         consolelog("Save data ?");
         var a = document.createElement("a");
@@ -1249,7 +1229,7 @@ function repaintDuration(){
     }
     function consoleSave(){
         var blob = new Blob(consoleData, {'type': "text/plain"});
-        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.log';
+        var fileName = 'Rendezvous-yoga-'+new Date().toISOString() + '.log';
         var a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
