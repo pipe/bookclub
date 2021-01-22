@@ -1,0 +1,1314 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Yoga</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="css/styless.css">
+
+    <style>
+        
+    </style>
+
+</head>
+<body>
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+<!-- <a href="index.html"><h1 id="title" class="text-center">Guided Meditation</h1></a> -->
+<div class="container-fluid">
+ <div class ="row">
+ <div class="col-sm-3">
+  <div class = "logo">
+  <img src="images/logo.png" alt= "rendezvous"> 
+  </div>
+ </div>
+ <div class = "col-sm-6">
+ </div>
+  <div class="col-sm-3 lefter">
+    <div class = "role" style= "display:none" >Role:  <span class="badge badge-primary" id="role"></span></div>
+	
+    <span  id="status" class= "topicons"></span>
+	
+	<span id="mutep" style = "display:none"  class="pmute topicons" title="mute your microphone"><a href="#" id ="muteimage" >  <img src="images/icons/speakeron.png" id = "ppmuter"  height="50" > </a>
+	<i id="muteIcon2" class="microphone" aria-hidden="true" title="mute"></i></span>
+   
+	<span id="stopp" style = "display:none"  title="End Call"> <img src="images/icons/RM_Layout-26.png" height="50" id = "stopCallp">  <i id="stopIcon2" class="stop" aria-hidden="true"></i></span>
+	</div>
+
+	</div>
+
+ </div>
+ 
+<div id="me">
+<div class="container">
+<div class = "row">
+    <video class ="col-sm-12" id="teacher"   autoplay playsinline muted > </video>
+	</div>
+	
+	</div>
+	<div class ="container-fluid">
+	<div class = "row">
+	<div  id="-0.6" style = "display:none"> </div>
+    <div  id="-0.4" style = "display:none"> </div>
+    <div  id="-0.2" style = "display:none">  </div>
+	 <div  id="-0.6" style = "display:none"> </div>
+     <div  id="-0.4" style = "display:none"></div>
+      <div  id="-0.2" style = "display:none">  </div>
+	
+	</div>
+	</div>
+	<div class="container">
+	<div class = "row">
+	<div class ="col-sm-1">
+    <audio id="them" autoplay > </audio>
+	</div>
+
+</div>
+</div>
+</div>
+
+
+
+
+
+<div id="share" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">SEND THIS URL TO THE STUDENTS </h5>
+            </div>
+            <div class="modal-body" id="shareQR">
+                <p><strong>Share this URL to start a session </strong></p>
+                <p>You can use the share icon at the top of the screen</p>
+                <p>Then email/text it to each of the  students</p>
+                <p>Then press 'done'</p>
+            </div>
+            <div class="modal-footer">
+                <button id="shareDone" type="button" class="btn btn-secondary" data-dismiss="modal" >Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="accept" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">JOIN A MEDITATION SESSION </h5>
+            </div>
+            <div class="modal-body">
+                <p>Click 'Accept' to join the Meditation.</p>
+                <p>You also need to permit access to your microphone</p>
+				
+            </div>
+            <div class="modal-footer">
+                <button id="callAccept" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
+				</br>
+				
+            </div>
+			
+        </div>
+    </div>
+</div>
+<div id="nowebrtc" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sorry</h5>
+            </div>
+            <div class="modal-body">
+                <p>Unfortunately the browser you are using does not support WebRTC.</p>
+                <p>Please retry using Safari, Chrome, FireFox, Edge - or pretty much any modern browser</p>
+            </div>
+            <div class="modal-footer">
+                <button id="sadder" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="nomediaapi" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sorry</h5>
+            </div>
+            <div class="modal-body">
+                <p>Unfortunately the browser you are using does not support the full webAudio API.</p>
+                <p>Please try hosting the call with Chrome.</p>
+                <p>The members can use any modern browser</p>
+            </div>
+            <div class="modal-footer">
+                <button id="sad" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class ="container-fluid  footer">
+<div class="row">
+<div id="remotes" class="col-4"> 
+
+</div>
+
+<div class = "col-4">
+        <div id="chosenAction" class="controls" style ="display:none">
+            <div   class="controlicon topicons" title="Mute Group"> <a id= "muteall" href="#"> <img id="muteallimge" src="images/icons/muteheadoff.png" height="50" > </a>  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
+             <div id="mutediv"  class="controlicon topicons" title="mute your microphone"><a id= "mute" href="#"> <img id="muteimge2" src="images/icons/speakeron.png" height="50" > </a>  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
+            <div  type="button" class="controlicon topicons" title="End Call"><a id= "stopCall" href="#"> <img id="stopimage" src="images/icons/RM_Layout-26.png" height="50"> </a> <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
+			
+            <div class= "controlicon" data-toggle="button" aria-pressed="false" 
+			utocomplete="off">
+               <a id= "recordCall" href="#"> <img id="recorder" src="images/icons/RM_Layout-27.png" height="50">
+            </div>
+	</div>
+			<div class="personicon" id="0" style = "display:none" >
+			<img src = "images/icons/RM_Layout-18.png">
+			</div>
+		
+</div>
+<div class="col-4">
+<div id="remotesz" >
+    
+	
+	
+</div>
+</div >
+
+</div >
+</div >
+
+<!--video id="nosleep" width="1" playsinline muted>
+    Antisleep video.
+</video-->
+<!--audio  loop src="beachsounds.m4a" width="0" height="0" id="sea" -->
+
+
+ <!--<audio  loop ="true" autoplay = "true" >
+  <source src="Record_20201101_Beach sounds.m4a" type="audio/ogg">
+  <source src="Rcord_20201101_Beach sounds.m4a" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio> -->
+<script type="module">
+    var properties = {
+websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
+};
+
+
+
+var webRTCconfiguration = {
+    host : {
+        "iceServers": [
+            {urls: "stun:146.148.121.175:3478"},
+            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+        ],
+        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+    },
+    guest: {
+        "iceServers": [
+            {urls: "stun:146.148.121.175:3478"},
+        ],
+        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+    }
+};
+
+
+var socket; // used to set up connection with our peers.
+var mid;
+var cid;
+var myac;
+var initiator;
+var localStream;
+var localdcomp;
+var localmusic;
+const video = document.querySelector('video');
+var localpanned;
+var mute = false;
+var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
+var AudioContext = window.AudioContext || window.webkitAudioContext;
+var sessions = {};
+var mutepermanet = false;
+var isChrome = ("chrome" in window);
+var recorder;
+var chunks = [];
+var saved = false;
+var startRecTime = 0;
+var participants = 0;
+//var myImage = null;
+// really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
+
+var pans = [ 0.2, -0.2, 0.4, -0.4, 0.6 , -0.6, 0.8, -0.8,0.0];
+
+function participantshow (participants)
+{
+switch (participants) {
+        case "1":
+		$("#0.2").show();
+		break;
+		
+		case "2":
+		$("#-0.2").show();
+		break;
+		
+		case "3":
+		$("#0.4").show();
+		break;
+		
+		case "4":
+		$("#-0.4").show();
+		break;
+		
+		case "5":
+		$("#0.6").show();
+		break;
+		
+		case "6":
+		$("#-0.6").show();
+		break;
+		
+		case "7":
+		$("#0.8").show();
+		break;
+		
+		case "8":
+		$("#-0.8").show();
+		break;
+}
+}
+
+function Session(id,lpan) {
+    this.checker = null;
+    this.lastLoss = 0;
+    this.lastRecv =0;
+    this.fid = id;
+    this.panned = null;
+    this.dcomp = null;
+    this.peerout = null;
+    this.peerin = null;
+    this.statusChannel = null;
+    this.audio = null;
+    this.audioLevel =0.0;
+    //this.img = null;
+    //this.imageData = null;
+    if (!lpan) {
+        this.pan = pans.pop();
+        consolelog("created peer connection for " + id);
+        this.lcandyStash = [];
+    } else {
+        this.pc = null;
+        this.pan = lpan;
+        consolelog("dummy entry for " + id );
+    }
+    consolelog("pan is " + this.pan);
+	document.getElementById(+ this.pan).style.display = "inline-block";
+	if(initiator)
+	{
+	document.getElementById('0').style.display = "none";
+	}
+	//$("#"+this.pan).show();
+	//alert('wtf');
+    this.rdiv = document.createElement("div");
+    var remoteslot = document.getElementById(""+this.pan);
+    if (initiator) {
+        this.audio = document.createElement("video");
+        //this.audio.setAttribute("style","display: none;");
+        this.audio.setAttribute("muted","muted");
+        this.rdiv.appendChild(this.audio);
+        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
+    }
+    remoteslot.appendChild(this.rdiv);
+};
+Session.prototype.offerDeal = function (data) {
+    this.setupRTC();
+    this.pc.setRemoteDescription(data).then(_ =>
+        this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
+            ans.sdp = tweakSDP(ans.sdp);
+            this.pc.setLocalDescription(ans).then(_ =>
+                sendMessage(this.fid, mid, "answer", ans.sdp)
+            )
+        })
+    ).catch((e) => consolelog("set Remote offer error"+ e));
+};
+Session.prototype.answerDeal = function(data){
+    this.pc.setRemoteDescription(data)
+        .then( _ => {
+            //$("#action").text("hangup");
+        })
+        .catch(e => consolelog("set Remote answer error"+ e) );
+};
+Session.prototype.candidateDeal = function(data){
+    var jc = {
+        sdpMLineIndex: 0,
+        candidate: data.sdp
+    };
+    consolelog("adding candidate ", jc);
+    var nc = new RTCIceCandidate(jc);
+    this.pc.addIceCandidate(nc)
+        .then( _ => consolelog("added remote candidate"))
+        .catch((e) => consolelog("couldn't add candidate "+ e));
+};
+Session.prototype.stopSession = function() {
+    consolelog("removing " + this.fid);
+	document.getElementById(+ this.pan).style.display = "none";
+    delete sessions[this.fid];
+
+    var that = this;
+    if (initiator) {
+        Object.entries(sessions).forEach(sessionkva => {
+            var session = sessionkva[1];
+            if (that.dcomp && session.panned) {
+                session.panned.disconnect(that.dcomp);
+            }
+            if (that.panned && session.dcomp) {
+                that.panned.disconnect(session.dcomp);
+            }
+            if (session.statusChannel && (session.statusChannel.readyState == 'open')) {
+                session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
+            }
+        });
+    }
+    if (localpanned){
+        localpanned.disconnect(this.dcomp);
+    }
+    if (this.panned != null) {
+        this.panned.disconnect(localdcomp);
+        this.panned = null;
+        pans.push(this.pan);
+    }
+    if (this.dcomp != null) {
+        this.dcomp.disconnect();
+        this.dcomp = null;
+    }
+    if (this.peerout != null) {
+        this.peerout.disconnect();
+        this.peerout = null;
+    }
+    if (this.peerin != null){
+        this.peerin.disconnect();
+        this.peerin = null;
+    }
+    if (this.checker != null) {
+        window.clearTimeout(this.checker);
+        this.checker  = null;
+    }
+    if(this.pc != null){
+        var mpc = this.pc;
+        window.setTimeout(function () {
+            if (initiator) {
+                mpc.close();
+            } else {
+                stopCall(); // that is if we killed the (only) pc then byebye
+            }
+        },5000);
+        this.pc = null;
+    }
+    if (this.rdiv) {
+        var remotes = this.rdiv.parentNode;
+        remotes.removeChild(this.rdiv);
+    }
+    $("#status").text("Online: "+ Object.keys(sessions).length + " Student(s)");
+};
+
+Session.prototype.setupRTC = function(){
+    consolelog("setting up webRTC for "+this.fid);
+    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
+    this.pc.onicecandidate = (e) => {
+            consolelog("local ice candidate"+ e.candidate);
+            if (e.candidate != null) {
+                if (candyProt(e.candidate.candidate).toUpperCase()!="TCP") {
+                    if (this.pc.signalingState == 'stable') {
+                        sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
+                    } else {
+                        consolelog("stashing ice candidate");
+                        this.lcandyStash.push(e.candidate);
+                    }
+                } else {
+                    consolelog("skip TCP candidates");
+                }
+            }
+        };
+        this.pc.oniceconnectionstatechange = (e) => {
+            consolelog("ice state is changed"+ this.pc.iceConnectionState);
+            /*
+             "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
+             "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
+             "connected"	A usable pairing of local and remote candidates has been found for all components of the connection, and the connection has been established. It's possible that gathering is still underway, and it's also possible that the ICE agent is still checking candidates against one another looking for a better connection to use.
+             "completed"	The ICE agent has finished gathering candidates, has checked all pairs against one another, and has found a connection for all components.
+             "failed"	The ICE candidate has checked all candidates pairs against one another and has failed to find compatible matches for all components of the connection. It is, however, possible that the ICE agent did find compatible connections for some components.
+             "disconnected"	Checks to ensure that components are still connected failed for at least one component of the RTCPeerConnection. This is a less stringent test than "failed" and may trigger intermittently and resolve just as spontaneously on less reliable networks, or during temporary disconnections. When the problem resolves, the connection may return to the "connected" state.
+             "closed"
+             */
+            if (this.pc.iceConnectionState === "failed"){
+                this.stopSession();
+            }
+            if (this.pc.iceConnectionState === "disconnected"){
+                this.stopSession();
+            }
+        };
+        // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
+        if ('ontrack' in this.pc) {
+            // if so we use it
+            this.pc.ontrack = (event) => {
+                var stream = event.streams[0];
+                consolelog("got remote track ", event.track.kind);
+                this.addStream(stream,event.track.kind);
+            };
+        } else {
+            // if not we use add stream instead
+            this.pc.onaddstream = (event) => {
+                var stream = event.stream;
+                consolelog("got remote stream ", stream.kind);
+                this.addStream(stream);
+            }
+        }
+
+        // use this to determine the state of the 'hangup' button and send any candidates we found quickly
+        this.pc.onsignalingstatechange = (evt) => {
+            if (this.pc != null) {
+                consolelog("signalling state is ", this.pc.signalingState);
+                if (this.pc.signalingState == 'stable') {
+                    var can;
+                    while (can = this.lcandyStash.pop()) {
+                        consolelog("popping candidate off stash");
+                        sendMessage(this.fid, mid, "candidate", can.candidate);
+                    }
+					if (initiator)
+					{
+                    var act = $("#stopCall");
+					}
+					else 
+					{
+					var act = $("#stopCallp");
+					}
+                    act.click(_ => stopCall());
+                    window.onbeforeunload = function () {
+                        return this.pc!=null ? "If you leave this page you will end the connection." : null;
+                    }
+                }
+            }
+        };
+        this.pc.ondatachannel = (evt) => {
+            consolelog("got new datachannel from " +this.fid);
+            this.statusChannel = evt.channel;
+            consolelog("got new datachannel from " +this.statusChannel.label);
+
+            this.statusChannel.onopen = (ev) => {
+                consolelog("got open datachannel from " +this.fid);
+                that.tellAll();
+                // don't tell them about us.
+                // that.statusChannel.send(JSON.stringify({act: 'add', fid: cid, pan: "0"}));
+            };
+            var that = this;
+            this.statusChannel.onmessage = (ev) => {
+                //consolelog("got data on datachannel from " +that.fid+ " "+ev.data);
+                var mess = JSON.parse(ev.data);
+                if (mess.act === 'level'){
+                    if (mess.style){
+                        that.rdiv.parentNode.setAttribute("style", mess.style);
+                    }
+                }
+            }
+
+        };
+};
+Session.prototype.tellAll = function() {
+    var that = this;
+    Object.entries(sessions).forEach(sessionkva => {
+        var id = sessionkva[0];
+        var session = sessionkva[1];
+        // tell them about everyone (including themselves)
+        that.statusChannel.send(JSON.stringify({act: 'add', fid: session.fid, pan: session.pan}));
+        if (id != this.fid) {
+            // tell everyone (except them) about them
+            if ((session.statusChannel) && (session.statusChannel.readyState=='open')) {
+                session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan})); // I hear them
+            }
+        } else {
+            consolelog("skip me " + id);
+        }
+    });
+};
+Session.prototype.addStream = function(stream,kind) {
+    if (!kind) {
+        kind = "audio/video";
+    }
+    $("#status").text("Online : "+ Object.keys(sessions).length + " Student(s)");
+	
+    consolelog("got new stream" + stream + " kind =" + kind);
+    if (kind.indexOf("audio")!= -1) {
+        if (initiator) {
+            // inbound....
+            this.peerin = myac.createMediaStreamSource(stream);
+            this.panned = myac.createStereoPanner();
+            this.panned.pan.value = this.pan;
+            consolelog("panned to "+this.pan);
+            this.peerin.connect(this.panned);
+
+            // now connect panned to :
+            // local destination...
+            if (this.audio != null){
+                // note that these only exist because chrome is weird and needs an audio tag
+                // which can (and should) be muted - so this makes no sound.
+                this.audio.srcObject = stream;
+            }
+
+            // plug the panned output into our dcomp so we get the stereo effect as host.
+            if (localdcomp != null) {
+                this.panned.connect(localdcomp);
+            } else {
+                consolelog("nowhere to plug "+this.fid);
+            }
+
+            var that = this;
+
+            // outbound
+            // for now just add the localpanned stream
+
+            this.dcomp = myac.createDynamicsCompressor();
+            if (localpanned){
+                localpanned.connect(this.dcomp);
+                consolelog("connect local stream to dcomp");
+            }
+
+            Object.entries(sessions).forEach(sessionkva => {
+                var id = sessionkva[0];
+                if (id != this.fid) {
+                    var session = sessionkva[1];
+                    if (that.panned && session.dcomp) {
+                        that.panned.connect(session.dcomp); // they hear me
+                    }
+                    if (that.dcomp && session.panned) {
+                        session.panned.connect(that.dcomp); // I hear them
+                    }
+                } else {
+                    consolelog("skip me "+id);
+                }
+
+            });
+
+
+            this.peerout = myac.createMediaStreamDestination();
+            this.dcomp.connect(this.peerout);
+            localmusic.connect(this.peerout);
+
+            var pc = this.pc;
+            var pstream = this.peerout.stream;
+            if (pc.addTrack) {
+                pstream.getTracks().forEach(track => {
+                    pc.addTrack(track, pstream);
+                    consolelog("added mixed outbound track "+ track.id+" "+track.kind);
+                });
+                localStream.getVideoTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                    consolelog("added teacher outbound track "+ track.id+" "+track.kind);
+                });
+            } else {
+                pc.addStream(pstream);
+                consolelog("added panned outbound stream");
+            }
+        }  else {
+            //startRecTime = Date.now();
+            consolelog("added remote stream to audiotag");
+            document.getElementById("them").srcObject = stream;
+        }
+        var that = this;
+        this.checker = window.setInterval(function() {that.checkLoss();},1000);
+
+
+        // audio together here.
+        // depends on role
+        consolelog('Audio sample Rate is '+ myac.sampleRate);
+		if (initiator) {
+        $("#chosenAction").show();
+		}
+        $("#statsZone").show();
+    }
+	
+	if (kind.indexOf("video") != -1) {
+        if (initiator) {
+            var mediaElement = this.audio;
+			
+            mediaElement.srcObject = stream;
+            console.log('Video stream for '+this.pan);
+
+            mediaElement.onloadedmetadata = function (e) {
+                mediaElement.muted = true;
+                mediaElement.play();
+            };
+        } else {
+            var mediaElement = document.getElementById("teacher")
+            mediaElement.srcObject = stream;
+            console.log('Video stream for '+this.pan);
+
+            mediaElement.  = function (e) {
+                mediaElement.muted = true;
+                mediaElement.play();
+            };
+        }
+    }
+};
+
+Session.prototype.checkLoss = function(){
+    var that = this;
+    if (this.pc) {
+        this.pc.getReceivers()[0].getStats().then(
+            function (rs) {
+                var style = "";
+                rs.forEach(function (d) {
+                    if (d.type === "inbound-rtp") {
+                        var recvd = d.packetsReceived;
+                        var lost = d.packetsLost;
+                        if (lost > that.lastLoss) {
+                            var diffl = lost - that.lastLoss;
+                            var diffp = recvd - that.lastRecv;
+                            var pct = Math.ceil(100.0 * diffl / diffp);
+                            if (pct > 0) {
+                                var colour = rgb(128 + pct, 128, 128);
+                                style += "background-color:" + colour + "; ";
+                            }
+                        }
+                        that.lastLoss = lost;
+                        that.lastRecv = recvd;
+
+                    }
+                    if (d.type === "track") {
+                        that.audioLevel = d.audioLevel;
+                        var bwidth = Math.floor((that.audioLevel * 10.0));
+                        if (bwidth >= 2){
+                            style += " border-style:outset; ";
+                        } else {
+                            style += " border-style:hidden; ";
+                        }
+                        //consolelog("bwidth ="+bwidth);
+                    }
+                    /*if ((d.type ==="candidate-pair")&&(d.nominated)){
+                        consolelog("rtt for " +that.pan+" is "+d.currentRoundTripTime);
+                    }
+                    if (d.type === "remote-candidate"){
+                        $("#remote").text(d.candidateType);
+                    }
+                    if (d.type === "local-candidate"){
+                        $("#local").text(d.candidateType);
+                    }*/
+                }
+
+                );
+                that.rdiv.parentNode.setAttribute("style", style);
+                //consolelog("style ="+style);
+                if (!initiator){
+                    if ((that.statusChannel) && (that.statusChannel.readyState === 'open')){
+                        that.statusChannel.send(JSON.stringify({act: 'level',fid: that.fid, style:style }))
+                    }
+                }
+
+            });
+    }
+}
+
+
+function rgb
+(r, g,
+ b){
+    r = Math.floor(r);
+    g = Math.floor(g);
+    b = Math.floor(b);
+    return ["rgb(",r,",",g,",",b,")"].join("");
+}
+
+    // message stuff - used to create direct connection to peer over WEBRTC
+
+    function tweakSDP(sdp){
+        var lines = sdp.split("\r\n");
+        for (var i=0;i<lines.length;i++){
+            var line = lines[i];
+            if (line.startsWith("a=fmtp:111")){
+                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=64000";
+            }
+        }
+        return (lines.join("\r\n"));
+    }
+
+
+function messageDeal(event){
+    //consolelog("message is ", event.data);
+    var data = JSON.parse(event.data);
+    consolelog("message data is ", data);
+    if (data.to != mid){
+        alert("message mixup");
+    }
+    var session = sessions[data.from];
+    switch (data.type) {
+        case "offer":
+            if ((session == null) && (initiator)) {
+                session = new Session(data.from);
+                sessions[data.from] = session;
+            }
+            if (initiator){
+                session.offerDeal(data);
+            } else {
+                consolelog("huh? Guests send offers");
+            }
+            break;
+        case "answer":
+            if ((session) && (!initiator)){
+                session.answerDeal(data);
+            }
+            break;
+			
+			case "muteall":
+            if (!initiator){
+             mutepermanet = !mutepermanet;
+             setMute(!mute);
+             		 
+            }
+			else 
+			{
+			 mutepermanet = !mutepermanet;
+			 changemuteicon();
+			}
+            break;
+			
+			//case "newparticipants":
+           // participants = (participants + 1);
+			//participantshow (participants);
+             		 
+            
+            //break;
+			
+        case "candidate":
+            if (session) {
+                session.candidateDeal(data);
+            } else {
+                consolelog("should stash candidate for "+data.from);
+            }
+            break;
+    }
+}
+
+function candyProt(candy){
+    var ret = "none";
+    var bits = candy.split(" ");
+    if (bits.length >= 3){
+        ret = bits[2];
+    }
+    return ret;
+}
+    function sendMessage(to,from,type,data){
+        var messageJ = {
+            to:to,
+            from:from,
+            type:type,
+            sdp:data
+        };
+
+        var message = JSON.stringify(messageJ);
+        consolelog("sending "+ message);
+        socket.send(message);
+    }
+
+    // button actions
+    // this is singular -
+    function startCall(fid){
+
+        var that = sessions[cid];
+        var pc = that.pc;
+
+        that.statusChannel = pc.createDataChannel("status-"+Date.now());
+        that.statusChannel.onopen = () => {
+            consolelog("guest's status channel opened - sending ping");
+            that.statusChannel.send(JSON.stringify({act:"ping",date:Date.now()}));
+        };
+        that.statusChannel.onclose = (e) => {
+            consolelog("guest's status channel closed "+e);
+        };
+        that.statusChannel.onerror = (e) => {
+            consolelog("guest's status channel errored "+e);
+        };
+        consolelog("created status datachannel");
+        that.statusChannel.onmessage = (evt) => {
+            statusDeal(evt);
+        };
+        pc.createOffer(peerConnectionOfferAnswerCriteria)
+            .then(desc => {
+                consolelog("offer created");
+                $("#status").text("Making call to host");
+                desc.sdp = tweakSDP(desc.sdp);
+                pc.setLocalDescription(desc).then( d => sendMessage(fid, mid, desc.type, desc.sdp));
+            })
+            .catch(e => consolelog("offer not created due to "+ e) );
+    }
+
+
+    function stopCall(){
+        $("#status").text("Call ended.");
+		if (recorder)
+		{
+		 recorder.stop();
+		 }
+        document.location = "thanks.html";
+    }
+
+    function statusDeal(evt){
+        consolelog("got message "+evt.data);
+        var mo = JSON.parse(evt.data);
+        if (mo.act){
+            if (mo.act =="add"){
+                if (!sessions[mo.fid]) {
+                    var sess = new Session(mo.fid, mo.pan);
+                    consolelog("adding user " + mo.fid);
+                    sessions[mo.fid] = sess;
+					participants = (participants + 1);
+			       participantshow (participants);
+                }
+			
+            }
+            if (mo.act =="del"){
+                consolelog("delete user "+mo.fid);
+                var sess = sessions[mo.fid]
+                if (sess){
+                    sess.stopSession();
+                }
+				participants = (participants - 1);
+            }
+        } else {
+            consolelog("missing action");
+        }
+		//var lenp = (Object.keys(sessions).length -1);
+        $("#status").text("Online:  "+ Object.keys(sessions).length + " Student(s)");
+
+    }
+
+    function changemuteicon()
+	{
+	   if (!mutepermanet && initiator)
+		{
+		 var mutehead = document.getElementById('muteall');
+		mutehead.src = "images/icons/muteheadoff.png";
+		}
+		
+		if (mutepermanet && initiator)
+		{
+		var mutehead = document.getElementById('muteall');
+		mutehead.src = "images/icons/mutehead.png"
+		}
+	}
+
+
+    // mute management
+    function setMute(m){
+	   if( (mutepermanet) &&  (!initiator) && (mute))
+	   {
+	    consolelog('cant unmute');
+		return
+	    }
+		
+		if(initiator)
+		{
+        var mi = $("#muteIcon");
+		}
+		else 
+		{
+		var mi = $("#mutep");
+		}
+		if ((!initiator ) && (!mute))
+		{
+		 var muteimage = document.getElementById("ppmuter");
+		  muteimage.src = "images/icons/RM_Layout-25.png";
+		  
+		}
+		
+		if ((!initiator ) && (mute))
+		{
+		 var muteimage = document.getElementById("ppmuter");
+		  muteimage.src = "images/icons/speakeron.png";
+		  
+		}
+		
+		if (initiator && !mute )
+		{
+		var muteimage = document.getElementById("muteimge2");
+		muteimage.src = "images/icons/RM_Layout-25.png";
+		
+		}
+		
+		if (initiator && mute )
+		{
+		var muteimage = document.getElementById("muteimge2");
+		muteimage.src = "images/icons/speakeron.png";
+		}
+		
+		
+		
+		
+        mute = m;
+        //if (m){
+           // mi.removeClass("fa-microphone");
+          //  mi.addClass("fa-microphone-slash");
+        //} else {
+           // mi.removeClass("fa-microphone-slash");
+            //mi.addClass("fa-microphone");
+        //}
+        var audioTracks = localStream.getAudioTracks();
+        if (audioTracks[0]) {
+		
+		
+            audioTracks[0].enabled = !m;
+			
+        }
+    }
+	
+	function muteall()
+	{
+	  if(initiator)
+	  {
+	   consolelog("session" + sessions );
+	   var sess ;
+	   for (sess in sessions)
+	     {
+	     //consolelog("sessionfid", sessions[sess]);
+	     sendMessage(sessions[sess].fid, mid , "muteall" , true);
+	  }
+	      
+	  }
+	
+	}
+
+    // plumb the local audio together.
+function setupAudio() {
+
+    myac = new AudioContext();
+
+    //setNoSleep();
+	if (initiator){
+	var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: true};
+	}
+	else
+	{
+    var gumConstraints = {audio: {noiseSuppression: false,echoCancellation: false,autoGainControl: false,channelCount: 1, googAutoGainControl: false}, video: true};
+    }
+    // connect to our speakers
+    if (initiator){
+        // this works beautifully on firefox but fails in chrome
+        // unless we make a _lot_ of <audio> tags
+        localdcomp = myac.createDynamicsCompressor();
+        var dests = myac.createMediaStreamDestination();
+        localdcomp.connect(dests);
+        // set up play....
+        //consolelog("local dcomp connected ");
+        consolelog("sea sound being added")
+
+        var seaEl = document.createElement('audio');
+        seaEl.setAttribute("src","beachsounds.m4a");
+        seaEl.setAttribute("loop",true);
+        seaEl.setAttribute("id","sea");
+        document.body.appendChild(seaEl);
+
+        document.getElementById("them").srcObject = dests.stream;
+        document.getElementById("them").play();
+        // and add the sound of the sea...
+        var seatrack = myac.createMediaElementSource(seaEl);
+        localmusic = myac.createGain();
+        localmusic.gain.value = 0.3
+        seatrack.connect(localmusic)
+        seaEl.play();
+    }
+
+    var promise = new Promise(function (resolve, reject) {
+        navigator.mediaDevices.getUserMedia(gumConstraints)
+            .then((stream) => {
+                localStream = stream;
+                consolelog("setting localstream");
+
+                // do magic pan stuff here....
+                if (initiator) {
+                    var localsrc = myac.createMediaStreamSource(stream);
+					//video.srcObject = stream;
+                    localpanned = myac.createStereoPanner();
+                    localpanned.pan.value = 0.0;
+                    consolelog("local stream panned to 0.0 ");
+                    localsrc.connect(localpanned);
+                    localStream.getVideoTracks().forEach(track => {
+                        consolelog("added local track "+ track.id+ " "+ track.kind);
+                        document.getElementById("teacher").srcObject = stream;
+                    });
+
+
+                    $("#recordCall").show();
+					$("#muteall").show();
+					$("#mute").show();
+					$("#stopCall").show();
+					
+                } else {
+                    var pc = sessions[cid].pc; // implicit detection of us being a guest
+                    if (pc.addTrack) {
+                        stream.getTracks().forEach(track => {
+                            pc.addTrack(track, stream);
+                            consolelog("added local track "+ track.id+ " "+ track.kind);
+                        });
+                    } else {
+                        pc.addStream(stream);
+                        consolelog("added local stream");
+                    }
+                }
+                resolve(false);
+            })
+            .catch((e) => {
+                consolelog('getUserMedia() error:' + e);
+                reject(e);
+            });
+			
+			//video.play();
+    });
+    return promise;
+
+}
+
+    function setupRTC() {
+        var session = new Session(cid);
+        session.setupRTC();
+        sessions[cid] = session;
+    }
+
+    var playing = false;
+
+    function toggleplay(){
+        var audio = document.getElementById('them');
+        if (!playing) {
+            audio.play();
+        } else {
+            audio.pause();
+        }
+        playing = ! playing;
+    }
+function shared() {
+    setupRTC();
+	
+    setupAudio().then(_ => {
+        consolelog("ready for offer");
+        $("#status").text("Offline:");
+    });
+}
+function accepted() {
+    setupRTC();
+    setupAudio().then(_ => {
+        consolelog("ready for offer");
+        $("#status").text("Mic available");
+        startCall(cid);
+		$("#0").show();
+    });
+	$("#stopp").show();
+   $("#mutep").show();
+}
+
+function repaintDuration(){
+        var diff = Date.now() - startRecTime;
+        consolelog ("data on at "+diff);
+        var mins = Math.floor(diff / 60000);
+        var secs = Math.floor((diff % 60000) / 1000);
+        $("#recordCall").text(""+mins+":"+secs);
+    }
+
+    function recordCall() {
+        if (!recorder) {
+		    muteall();
+            startRecTime = Date.now();
+            var recStream = myac.createMediaStreamDestination();
+            recorder = new MediaRecorder(recStream.stream);
+            localpanned.connect(recStream);
+            localdcomp.connect(recStream);
+            recorder.ondataavailable = function (evt) {
+                chunks.push(evt.data);
+                repaintDuration();
+            };
+            recorder.onstop = function (evt) {
+                // Make blob out of our blobs, and open it.
+                var blob = new Blob(chunks, {'type': 'audio/ogg; codecs=opus'});
+				// unmute automatically
+				muteall();
+                saveData(blob)
+            };
+            recorder.start(10000);
+            repaintDuration();
+            saved = false;
+            window.onbeforeunload = function() {
+                return !saved ? "If you leave this page you will lose the recording." : null;
+            }
+        } else {
+            recorder.stop();
+            recorder = null;
+        }
+    }
+    function saveData(blob) {
+        var fileName = 'Rendezvous-yoga-'+new Date().toISOString() + '.webm';
+
+        consolelog("Save data ?");
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        consolelog("saving wav blob as " + fileName);
+        var burl = window.URL.createObjectURL(blob);
+        a.href = burl;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(burl);
+        saved = true;
+        $("#status").text("Call saved as "+fileName);
+        consoleSave();
+    }
+
+// decide who we are initiator or recpient.
+// notice that the actual call goes in the reverse direction
+// the recipient of the invite actually creates the audiobearing peerconnection
+// the initiator then accepts this audio - This allows the initiator the chance to
+// change their mind, if their circumstances have changed since the invite was sent.
+
+
+    function setRole() {
+        cid = $.getUrlVar("clubId");
+        mid = localStorage['clubId'];
+        //var act = $("#action");
+        if (!mid) {
+            var array = new Uint32Array(8);
+            window.crypto.getRandomValues(array);
+            var hexCodes = [];
+            for (var i = 0; i < array.length; i ++ ){
+                // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
+                var value = array[i];
+                // toString(16) will give the hex representation of the number without padding
+                var stringValue = value.toString(16);
+                // We use concatenation and slice for padding
+                var padding = '00000000';
+                var paddedValue = (padding + stringValue).slice(-padding.length)
+                hexCodes.push(paddedValue);
+            }
+            mid = hexCodes.join("").toLowerCase();
+            consolelog("mid ="+ mid);
+            localStorage['clubId'] = mid;
+        }
+        if (cid == null){
+            document.location = location.pathname + "?" + "clubId=" + mid ;
+            // this has the effect of getting our id into the browser bar -
+            // making it easy to share etc.
+        } else {
+            socket = new WebSocket( properties.websocketURL + mid);
+            socket.onmessage = messageDeal;
+            socket.onopen = (_) => {
+                var url = document.location.href;
+                consolelog("href = "+url);
+
+                initiator = (mid === cid);
+
+                var smodal;
+                if (initiator && !("StereoPannerNode" in window)) {
+                    smodal ="#nomediaapi";
+                } else {
+                    $("#role").text(initiator ? "Host" : "Guest");
+                    $("#status").text("Waiting for connection");
+                    smodal = initiator ? "#share" : "#accept";
+                }
+                $(smodal).modal('show');
+            };
+            socket.onerror = (e) => {
+                consolelog("can't open websocket"+ e);
+                $("#status").text("Internet problems ?");
+
+            };
+            socket.onclose = (e) => {
+                consolelog(" websocket closed"+ e);
+                if (initiator) {
+                    $("#status").text("Server problems ?");
+                }
+            };
+
+        }
+    }
+
+    var consoleData = [];
+    function consolelog(text){
+        console.log(text);
+        if (initiator){
+            consoleData.push(""+Date.now()+ ":"+ text +"\n")
+        }
+    }
+    function consoleSave(){
+        var blob = new Blob(consoleData, {'type': "text/plain"});
+        var fileName = 'Rendezvous-yoga-'+new Date().toISOString() + '.log';
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        console.log("saving wav blob as " + fileName);
+        var burl = window.URL.createObjectURL(blob);
+        a.href = burl;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(burl);
+        $("#status").text("Log saved as "+fileName);
+        consoleData = []
+    }
+
+    // some housekeeping
+
+
+    $.extend({
+        getUrlVars: function(){
+            var vars = [], hash;
+            var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+            for(var i = 0; i < hashes.length; i++)
+            {
+                hash = hashes[i].split('=');
+                vars.push(hash[0]);
+                vars[hash[0]] = hash[1];
+            }
+            return vars;
+        },
+        getUrlVar: function(name){
+            return $.getUrlVars()[name];
+        }
+    });
+	
+	$( "a" ).click(function( event ) {
+     event.preventDefault();
+	 });
+	 
+    $( document ).ready( _ => {
+        $("#chosenAction").hide();
+        $("#packetLoss").hide();
+        $("#statsZone").hide();
+		$("#recordCall").hide();
+		$("#muteall").hide();
+		$("#stopCall").hide();
+		$("#mute").hide();
+		
+		
+		
+        document.getElementById("callAccept").onclick = accepted;
+        document.getElementById("shareDone").onclick = shared;
+        document.getElementById("me").onclick = toggleplay;
+        document.getElementById("recordCall").onclick = recordCall;
+        document.getElementById("muteall").onclick = muteall;
+		 
+        if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
+            $("#mute").click(_ => setMute(!mute));
+			$("#muteimage").click(_ => setMute(!mute));
+            setRole();
+        } else {
+            $('#nowebrtc').modal('show');
+        }
+		
+       
+    });
+</script>
+
+</body>
+</html>
+
+    
+
+   
+
