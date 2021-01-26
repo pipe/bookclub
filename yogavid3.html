@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Yoga</title>
+    <title>Rendezvous Yoga</title>
  <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -50,7 +50,7 @@
 <div id="me">
 <div class="container">
 <div class = "row">
-<div class="col-sm-3"> </div> <div class="col-sm-5 topcontrol"><div id="chosenAction" class="controls" style ="display:none">
+ <div class="col-sm-12 topcontrol"><div id="chosenAction" class="controls" style ="display:none">
             <div   class="controlicon topicons" title="Mute Group"> <a id= "muteall" href="#"> <img id="muteallimge" src="images/icons/muteheadoff.png" height="50" > </a>  <i id="muteallIcon" class="fexchange" aria-hidden="true"></i></div>
              <div id="mutediv"  class="controlicon topicons" title="mute your microphone"><a id= "mute" href="#"> <img id="muteimge2" src="images/icons/speakeron.png" height="50" > </a>  <i id="muteIcon" class="microphone" aria-hidden="true" title="mute"></i></div>
             <div  type="button" class="controlicon topicons" title="End Call"><a id= "stopCall" href="#"> <img id="stopimage" src="images/icons/RM_Layout-26.png" height="50"> </a> <i id="stopIcon" class="stop" aria-hidden="true"></i></div>
@@ -61,24 +61,26 @@
             </div>
 	</div>
 </div>
- <div class="col-sm-4"> </div>
+ 
 </div>
 <div class = "row">
+
     <video class ="col-sm-12" id="teacher"   autoplay playsinline muted > </video>
+	
 	</div>
 	
 	</div>
 	<div class ="container-fluid">
 	<div class = "row ribbon">
 	  
-	<div class= "max-height" id="0" > </div>
+	<div class= "max-height" id="0"  > </div>
 	<div class= "max-height"  id="-0.6"> </div>
     <div class= "max-height"  id="-0.4" > </div>
     <div  class= "max-height" id="-0.2" >  </div>
 	<div  class= "max-height" id="-0.8" >  </div>
 	 <div  class= "max-height" id="0.6" > </div>
      <div  class= "max-height" id="0.4" ></div>
-      <div class= "max-height"  id="0.8" >  </div>
+      <div class= "max-height" id="0.8" >  </div>
 	   
 	 
 	</div>
@@ -107,7 +109,7 @@
                 <p><strong>Share this URL to start a session </strong></p>
                 <p>You can use the share icon at the top of the screen</p>
                 <p>Then email/text it to each of the  students</p>
-                <p>Then press 'done'</p>
+                <p>Then press 'Done'</p>
             </div>
             <div class="modal-footer">
                 <button id="shareDone" type="button" class="btn btn-secondary" data-dismiss="modal" >Done</button>
@@ -119,10 +121,10 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">JOIN A YOGO SESSION </h5>
+                <h5 class="modal-title">JOIN A YOGA SESSION </h5>
             </div>
             <div class="modal-body">
-                <p>Click 'Accept' to join the Yoga.</p>
+                <p>Click 'Accept' to join the Yoga session</p>
                 <p>You also need to permit access to your microphone and video</p>
 				
             </div>
@@ -400,7 +402,8 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    $("#status").text("Online: "+ Object.keys(sessions).length + " Student(s)");
+	
+     $("#status").text("Online: "+ Object.keys(sessions).length + "");
 };
 
 Session.prototype.setupRTC = function(){
@@ -526,7 +529,8 @@ Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
         kind = "audio/video";
     }
-    $("#status").text("Online : "+ Object.keys(sessions).length + " Student(s)");
+	//var simonstudents = Object.keys(sessions).length -1 ;
+     $("#status").text("Online: "+ Object.keys(sessions).length + " ");
 	
     consolelog("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
@@ -627,10 +631,11 @@ Session.prototype.addStream = function(stream,kind) {
 			viddiv.appendChild(mediaElement);
 			
             console.log('Video stream for '+this.pan);
-			
+			document.getElementById('teacher').setAttribute("style","height:300px");
 
             mediaElement.onloadedmetadata = function (e) {
                 mediaElement.muted = true;
+				mediaElement.setAttribute('height', '140');
                 mediaElement.play();
             };
         } else {
@@ -662,7 +667,7 @@ Session.prototype.checkLoss = function(){
                             var pct = Math.ceil(100.0 * diffl / diffp);
                             if (pct > 0) {
                                 var colour = rgb(128 + pct, 128, 128);
-                                style += "background-color:" + colour + "; ";
+                                //style += "background-color:" + colour + "; ";
                             }
                         }
                         that.lastLoss = lost;
@@ -673,9 +678,9 @@ Session.prototype.checkLoss = function(){
                         that.audioLevel = d.audioLevel;
                         var bwidth = Math.floor((that.audioLevel * 10.0));
                         if (bwidth >= 2){
-                            style += " border-style:outset; ";
+                            //style += " border-style:outset; ";
                         } else {
-                            style += " border-style:hidden; ";
+                           // style += " border-style:hidden; ";
                         }
                         //consolelog("bwidth ="+bwidth);
                     }
@@ -872,7 +877,7 @@ function candyProt(candy){
             consolelog("missing action");
         }
 		//var lenp = (Object.keys(sessions).length -1);
-        $("#status").text("Online:  "+ Object.keys(sessions).length + " Student(s)");
+         $("#status").text("Online: "+ Object.keys(sessions).length + " ");
 
     }
 

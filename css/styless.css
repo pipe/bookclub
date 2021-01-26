@@ -36,21 +36,23 @@ min-height:10px;
 .topcontrol
 {
 margin-bottom:5px;
+text-align: center;
 }
 
 .max-height
 {
-	
-max-height: 50px;
-padding:7px;
-display: inline-grid;
+
+padding-right:2px;
+display: inline-block;
 }
 
 #techer
 {
 margin-bottom: 5px;
 padding-bottom: 15px;	
+object-fit: cover;
 }
+
 .lefter
 {
 padding-top: 10px;
@@ -132,7 +134,7 @@ height:80px;
 
 .controls
 {
-border: 1px solid #fff;
+/*border: 1px solid #fff;*/
 border-radius:15px ;
 
 background: rgba(0, 0, 0, 0.1);
