@@ -31,6 +31,7 @@ background:none;
 {
 padding :5px;	
 min-height:10px;
+display:inline-block;
 }
 
 .topcontrol
@@ -41,7 +42,8 @@ text-align: center;
 
 .max-height
 {
-
+object-fit: cover;
+max-height: 50px;
 padding-right:2px;
 display: inline-block;
 }

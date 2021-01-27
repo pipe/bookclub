@@ -405,7 +405,7 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    $("#status").text("Online: "+ Object.keys(sessions).length + " Student(s)");
+    $("#status").text("Online: "+ Object.keys(sessions).length + " ");
 };
 
 Session.prototype.setupRTC = function(){
@@ -531,7 +531,7 @@ Session.prototype.addStream = function(stream,kind) {
     if (!kind) {
         kind = "audio/video";
     }
-    $("#status").text("Online : "+ Object.keys(sessions).length + " Student(s)");
+    $("#status").text("Online : "+ Object.keys(sessions).length + " ");
 	
     consolelog("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio")!= -1) {
@@ -866,7 +866,7 @@ function candyProt(candy){
             consolelog("missing action");
         }
 		//var lenp = (Object.keys(sessions).length -1);
-        $("#status").text("Online:  "+ Object.keys(sessions).length + " Student(s)");
+        $("#status").text("Online:  "+ Object.keys(sessions).length + "");
 
     }
 
