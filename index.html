@@ -10,26 +10,6 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
-    <style>
-        body {
-            background-image: url("fhp2.jpeg");
-            background-color: #cccccc;
-            background-position: center;
-            background-size: cover;
-            background-repeat: no-repeat;
-        }
-        .footer {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            color: white;
-            text-align: center;
-        }
-        html, body { height: 100%; width: 100%; margin: 0; }
-        .all { height: 100%; width: 100%;}
-    </style>
-
 </head>
 <body>
 <!-- Optional JavaScript -->
@@ -41,7 +21,7 @@
 
 <div class="card container-fluid all">
     <div id="remotes" class="card-header" >
-        <canvas id="brady" width="1200" height="150"></canvas>
+        <canvas id="brady" width="1024" height="1024"></canvas>
         <div id="vids" class="row no-gutters" >
             <div class="col" id="-0.9"></div>
             <div class="col" id="-0.8"></div>
@@ -59,7 +39,7 @@
         <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
-    <video id="bookVideo" muted autoplay="true" class="card-img-top" poster="fhp2.jpeg">Book goes here</video>
+    <!--video id="bookVideo" muted autoplay="true" class="card-img-top" poster="fhp2.jpeg">Book goes here</video-->
 
     <div class="card-body">
         <div id="chosenAction" class="row justify-content-around">
@@ -217,8 +197,18 @@ var startRecTime = 0;
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
-var pans = [ 0.9, -0.9, 0.2, -0.2, 0.6 , -0.6, 0.8, -0.8, 0.4, -0.4, 0.0];
-
+var pans = [ 0.2, -0.2, 0.6 , -0.6, 0.8, -0.8, 0.4, -0.4, 0.0];
+var places = [
+    {x:80,y:825,w:150,h:175},
+    {x:250,y:825,w:150,h:175},
+    {x:420,y:825,w:150,h:175},
+    {x:590,y:825,w:150,h:175},
+    {x:170,y:10,w:150,h:175},
+    {x:770,y:10,w:150,h:175},
+    {x:600,y:10,w:150,h:175},
+    {x:10,y:10,w:150,h:175},
+    {x:330,y:10,w:250,h:325}
+]
 var canv2d = document.getElementById("brady").getContext( '2d' );
 var mcu;
 
@@ -234,10 +224,12 @@ function Session(id,lpan) {
     this.statusChannel = null;
     this.audio = null;
     this.audioLevel =0.0;
+    this.place = {x:0,y:0,w:100,h:100};
     //this.img = null;
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
+        this.place = places.pop();
         console.log("created peer connection for " + id);
         this.lcandyStash = [];
     } else {
@@ -322,6 +314,7 @@ Session.prototype.stopSession = function() {
         this.panned.disconnect(localdcomp);
         this.panned = null;
         pans.push(this.pan);
+        places.push(this.place);
     }
     if (this.dcomp != null) {
         this.dcomp.disconnect();
@@ -357,9 +350,11 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    var cw = canv2d.canvas.width;
-    var ch = canv2d.canvas.height;
-    canv2d.clearRect(0,0, cw, ch);
+    //var cw = canv2d.canvas.width;
+    //var ch = canv2d.canvas.height;
+
+    drawDrop();
+    //canv2d.clearRect(0,0, cw, ch);
 
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
@@ -371,6 +366,7 @@ Session.prototype.setupRTC = function(){
             if (e.candidate != null) {
                 if (candyProt(e.candidate.candidate).toUpperCase()!="TCP") {
                     if (this.pc.signalingState == 'stable') {
+                        sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
                         sendMessage(this.fid, mid, "candidate", e.candidate.candidate);
                     } else {
                         console.log("stashing ice candidate");
@@ -610,18 +606,20 @@ Session.prototype.tellAll = function() {
             // draw the current frame of localVideo onto the canvas,
             // starting at 0, 0 (top-left corner) and covering its full
             // width and heigth
-            var cw = canv2d.canvas.clientWidth;
-            var ch = canv2d.canvas.clientHeight;
+            //var cw = canv2d.canvas.clientWidth;
+            //var ch = canv2d.canvas.clientHeight;
             var vh = that.audio.videoHeight;
             var vw = that.audio.videoWidth;
-            var rat = vw/vh;
-            var rw = Math.floor(ch *rat);
-            var abspan = (1.0 +that.pan) / 2 ;
-            var x = Math.floor((cw * abspan) - vw/2);
+            //var rat = vw/vh;
+            //var rw = Math.floor(ch *rat);
+            //var abspan = (1.0 +that.pan) / 2 ;
+            //var x = Math.floor((cw * abspan) - vw/2);
 // void ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 
-            canv2d.drawImage(that.audio, 0, 0,vw,vh, x,0,rw,ch);
-            //console.log("drawing video for +"+that.fid+ " at " + x);
+            //canv2d.drawImage(that.audio, 0, 0,vw,vh, x,0,rw,ch);
+            canv2d.drawImage(that.audio, 0, 0,vw,vh, that.place.x, that.place.y,that.place.w,that.place.h);
+
+            //console.log("drawing video for +"+that.fid+ " at " + that.place.x , that.place.y,that.place.w,that.place.h);
             //repeat this every time a new frame becomes available using
             //the browser's build-in requestAnimationFrame method
             requestAnimationFrame(drawToCanvas);
@@ -854,7 +852,7 @@ function candyProt(candy){
 
 function captureCanvas(){
     var can = document.getElementById("brady");
-    mcu = can.captureStream(5);
+    mcu = can.captureStream(15);
     console.log("captured canvas stream");
 }
 
@@ -867,7 +865,7 @@ function setupAudio() {
     var gumConstraints = {audio: true, video: {
         width: {  ideal: 240 },
         height: { ideal: 320 },
-        frameRate: {ideal: 5},
+        frameRate: {ideal: 15},
         //aspectRatio: { ideal: 1.7777777778 }
     },};
 
@@ -949,6 +947,7 @@ function setupAudio() {
             console.log("ready for offer");
             $("#status").text("Waiting for guests.");
         });
+        drawDrop();
     }
     function accepted() {
         setupRTC();
@@ -965,7 +964,15 @@ function setupAudio() {
         var secs = Math.floor((diff % 60000) / 1000);
         $("#recordCall").text(""+mins+":"+secs);
     }
-
+    function drawDrop(){
+        var img=new Image();
+        img.onload=function(){
+            canv2d.canvas.width=1024;
+            canv2d.canvas.height=1024;
+            canv2d.drawImage(img,0,0,img.width,img.height,0,0,1024,1024);
+        }
+        img.src="fhp2.jpeg";
+    }
     function recordCall() {
         if (!recorder) {
             startRecTime = Date.now();
@@ -1080,7 +1087,7 @@ function setupAudio() {
                 } else {
                     $("#role").text(initiator ? "Host" : "Guest");
                     $("#status").text("Waiting for connection");
-                    smodal = initiator ? "#shareScreen" : "#accept";
+                    smodal = initiator ? "#share" : "#accept";
                 }
                 $(smodal).modal('show');
                 //Robohash.render(mid, document.getElementById("me"));
@@ -1138,6 +1145,7 @@ function _addSourceToVideo(element, type, dataURI) {
         videoEl.play();
     }
 */
+
 
     // some housekeeping
 
