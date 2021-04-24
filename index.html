@@ -193,6 +193,7 @@ var recorder;
 var chunks = [];
 var saved = false;
 var startRecTime = 0;
+var tweak = true;
 
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
@@ -694,14 +695,20 @@ function rgb
     // message stuff - used to create direct connection to peer over WEBRTC
 
     function tweakSDP(sdp){
-        var lines = sdp.split("\r\n");
-        for (var i=0;i<lines.length;i++){
-            var line = lines[i];
-            if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
+
+        var rsdp = sdp;
+        if (tweak) {
+            console.log("tweak ptime etc")
+            var lines = sdp.split("\r\n");
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (line.startsWith("a=fmtp:111")) {
+                    lines[i] = "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
+                }
             }
+            rsdp = lines.join("\r\n");
         }
-        return (lines.join("\r\n"));
+        return rsdp;
     }
 
 
@@ -1048,6 +1055,11 @@ function setupAudio() {
 
     function setRole() {
         cid = $.getUrlVar("clubId");
+        var noptime = $.getUrlVar("noptime");
+        if (noptime) {
+            console.log("skip ptime etc tweak");
+            tweak = false;
+        }
         mid = localStorage['clubId'];
         //var act = $("#action");
         if (!mid) {
