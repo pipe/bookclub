@@ -867,14 +867,39 @@ function captureCanvas(){
 function setupAudio() {
 
     myac = new AudioContext();
+    const gumConstraints = {
+        host:
+            {
+                audio: {
+                    noiseSuppression: false,
+                    echoCancellation: false,
+                    autoGainControl: false,
+                    channelCount: 1,
+                    googAutoGainControl: false
+                },
+                video: {
+                    width: {  ideal: 240 },
+                    height: { ideal: 320 },
+                    frameRate: {ideal: 15},
+                }
+            },
+        guest:
+            {
+                audio: {
+                    noiseSuppression: false,
+                    echoCancellation: false,
+                    autoGainControl: false,
+                    channelCount: 1,
+                    googAutoGainControl: false
+                }, video: {
+                    width: {  ideal: 240 },
+                    height: { ideal: 320 },
+                    frameRate: {ideal: 15},
+                }
+            }
 
+    }
     //setNoSleep();
-    var gumConstraints = {audio: true, video: {
-        width: {  ideal: 240 },
-        height: { ideal: 320 },
-        frameRate: {ideal: 15},
-        //aspectRatio: { ideal: 1.7777777778 }
-    },};
 
     // connect to our speakers
     if (initiator){
@@ -890,7 +915,7 @@ function setupAudio() {
     }
 
     var promise = new Promise(function (resolve, reject) {
-        navigator.mediaDevices.getUserMedia(gumConstraints)
+        navigator.mediaDevices.getUserMedia(initiator?gumConstraints.host:gumConstraints.guest)
             .then((stream) => {
                 localStream = stream;
                 // do magic pan stuff here....
