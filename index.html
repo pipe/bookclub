@@ -160,7 +160,7 @@ var myac;
 var initiator;
 var localStream;
 //var localdcomp;
-var localpanned;
+//var localpanned;
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -514,7 +514,6 @@ Session.prototype.tellAll = function() {
                 // outbound
                 // for now just add the localpanned stream
 
-                this.dcomp = myac.createDynamicsCompressor();
                 const lp =localPanned();
                 if (lp) {
                     lp.connect(this.dcomp);
@@ -522,6 +521,7 @@ Session.prototype.tellAll = function() {
                 }
                 // local dcomp and local panned are now in the session[cid]
 */
+                this.dcomp = myac.createDynamicsCompressor();
                 var that = this;
                 Object.entries(sessions).forEach(sessionkva => {
                     var id = sessionkva[0];
@@ -907,11 +907,11 @@ function setupAudio() {
                 // do magic pan stuff here....
                 if (initiator) {
                     var localsrc = myac.createMediaStreamSource(stream);
-                    localpanned = myac.createStereoPanner();
-                    localpanned.pan.value = 0.0;
+                    s = getInitiatorSession();
+                    s.panned = myac.createStereoPanner();
+                    s.panned.pan.value = 0.0;
                     console.log("local stream panned to 0.0 ");
-                    localsrc.connect(localpanned);
-                    // do something with video here - plunk it on our robot....
+                    localsrc.connect(s.panned);
                     sessions[mid].addVstream(stream);
                     $("#brady").show();
                     $("#recordCall").show();
