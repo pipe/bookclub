@@ -36,7 +36,6 @@
             <div class="col" id="0.9"></div>
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
-        <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
 
@@ -160,7 +159,7 @@ var cid;
 var myac;
 var initiator;
 var localStream;
-var localdcomp;
+//var localdcomp;
 var localpanned;
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
@@ -228,7 +227,6 @@ function Session(id,lpan) {
     this.peerout = null;
     this.peerin = null;
     this.statusChannel = null;
-    this.audio = null; // media elememt we will connect remote audio
     this.video = null; // media elememt we will connect remote video
     this.audioLevel =0.0;
     this.place = {x:0,y:0,w:100,h:100};
@@ -252,16 +250,15 @@ function Session(id,lpan) {
         var height = canvas.clientHeight;
         var width = Math.min(canvas.clientWidth / 10, height * 0.75);
         // add an audio tag per recipient because chrome needs some suckage on the pipe...
-        if (isChrome) {
+        /*if (isChrome) {
             this.audio = document.createElement("audio");
             //this.audio.setAttribute("style","display: none;");
             this.audio.muted = true;
             this.audio.setAttribute("autoplay", "true");
             ;
             this.rdiv.appendChild(this.audio);
-        }
+        }*/
         this.video = document.createElement("video");
-        //this.audio.setAttribute("style","display: none;");
         this.video.muted = true;
         this.video.setAttribute("autoplay", "true");
         this.video.setAttribute("width", width);
@@ -321,11 +318,12 @@ Session.prototype.stopSession = function() {
             }
         });
     }
-    if (localpanned){
-        localpanned.disconnect(this.dcomp);
+    const lp = localPanned();
+    if (lp){
+        lp.disconnect(this.dcomp);
     }
     if (this.panned != null) {
-        this.panned.disconnect(localdcomp);
+        this.panned.disconnect(localDcomp());
         this.panned = null;
         pans.push(this.pan);
         places.push(this.place);
@@ -358,11 +356,12 @@ Session.prototype.stopSession = function() {
         this.pc = null;
     }
     if (this.rdiv) {
+        /*
         if (this.audio) {
             this.audio.srcObject = null;
             this.audio.pause();
             this.rdiv.removeChild(this.audio);
-        }
+        }*/
         if (this.video) {
             this.video.srcObject = null;
             this.video.pause();
@@ -371,12 +370,7 @@ Session.prototype.stopSession = function() {
         var remotes = this.rdiv.parentNode;
         remotes.removeChild(this.rdiv);
     }
-    //var cw = canv2d.canvas.width;
-    //var ch = canv2d.canvas.height;
-
     drawDrop();
-    //canv2d.clearRect(0,0, cw, ch);
-
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
@@ -504,28 +498,31 @@ Session.prototype.tellAll = function() {
                 this.panned.pan.value = this.pan;
                 console.log("panned to " + this.pan);
                 this.peerin.connect(this.panned);
-
+/*
                 // now connect panned to :
                 // local destination...
 
                 // plug the panned output into our dcomp so we get the stereo effect as host.
-                if (localdcomp != null) {
-                    this.panned.connect(localdcomp);
+                var ld = localDcomp();
+                if (ld != null) {
+                    this.panned.connect(ld);
                 } else {
                     console.log("nowhere to plug " + this.fid);
                 }
 
-                var that = this;
 
                 // outbound
                 // for now just add the localpanned stream
 
                 this.dcomp = myac.createDynamicsCompressor();
-                if (localpanned) {
-                    localpanned.connect(this.dcomp);
+                const lp =localPanned();
+                if (lp) {
+                    lp.connect(this.dcomp);
                     console.log("connect local stream to dcomp");
                 }
-
+                // local dcomp and local panned are now in the session[cid]
+*/
+                var that = this;
                 Object.entries(sessions).forEach(sessionkva => {
                     var id = sessionkva[0];
                     if (id != this.fid) {
@@ -537,7 +534,7 @@ Session.prototype.tellAll = function() {
                             session.panned.connect(that.dcomp); // I hear them
                         }
                     } else {
-                        console.log("skip me " + id);
+                        console.log("skip me in the audio mux " + id);
                     }
 
                 });
@@ -998,8 +995,8 @@ function setupAudio() {
             startRecTime = Date.now();
             var recStream = myac.createMediaStreamDestination();
             recorder = new MediaRecorder(recStream.stream);
-            localpanned.connect(recStream);
-            localdcomp.connect(recStream);
+            localPanned().connect(recStream);
+            localDcomp().connect(recStream);
             recorder.ondataavailable = function (evt) {
                 chunks.push(evt.data);
                 repaintDuration();
