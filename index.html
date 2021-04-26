@@ -169,7 +169,6 @@ var recorder;
 var chunks = [];
 var saved = false;
 var startRecTime = 0;
-var tweak = true;
 
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
@@ -262,7 +261,6 @@ Session.prototype.offerDeal = function (data) {
     this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
         this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
-            ans.sdp = tweakSDP(ans.sdp);
             this.pc.setLocalDescription(ans).then(_ =>
                 sendMessage(this.fid, mid, "answer", ans.sdp)
             )
@@ -375,6 +373,11 @@ Session.prototype.setupRTC = function(){
         };
         this.pc.oniceconnectionstatechange = (e) => {
             console.log("ice state is changed", this.pc.iceConnectionState);
+            if (this.pc.iceConnectionState === "connected"){
+                console.log(this.pc.getTransceivers());
+                var send = this.pc.getTransceivers().find( (tr) => tr.sender && tr.sender.track.kind==="audio").sender;
+                tweakOpus(send);
+            }
             /*
              "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
              "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
@@ -504,6 +507,7 @@ Session.prototype.tellAll = function() {
                     if (mcu) {
                         mcu.getTracks().forEach(track => {
                             pc.addTrack(track, mcu);
+                            flipCodecOrder(pc,track);
                             console.log("added mcu outbound track ", track.id, track.kind, track.label);
                         });
                     }
@@ -615,34 +619,46 @@ Session.prototype.checkLoss = function(){
 }
 
 
-function rgb
-(r, g,
- b){
-    r = Math.floor(r);
-    g = Math.floor(g);
-    b = Math.floor(b);
-    return ["rgb(",r,",",g,",",b,")"].join("");
-}
-
-    // message stuff - used to create direct connection to peer over WEBRTC
-
-    function tweakSDP(sdp){
-
-        var rsdp = sdp;
-        if (tweak) {
-            console.log("tweak ptime etc")
-            var lines = sdp.split("\r\n");
-            for (var i = 0; i < lines.length; i++) {
-                var line = lines[i];
-                if (line.startsWith("a=fmtp:111")) {
-                    lines[i] = "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
-                }
-            }
-            rsdp = lines.join("\r\n");
+    function tweakOpus(send) {
+        const paras = send.getParameters();
+        console.log("initial audio encoder params");
+        console.log(paras);
+        if ((paras) && (paras.encodings)) {
+            paras.encodings[0].maxBitrate = 32000;
+            send.setParameters(paras);
+            console.log(paras);
         }
-        return rsdp;
-    }
 
+    }
+    function codecPriority(codecMime){
+        var ret = 2;
+        if (codecMime.includes("h264") || codecMime.includes("H264")){
+            ret = 1;
+        } else if (codecMime.includes("h265") || codecMime.includes("H265")){
+            ret =0;
+        }
+        return ret;
+    }
+    function flipCodecOrder(pc,track){
+        if (RTCRtpSender.getCapabilities) {
+            const {codecs} = RTCRtpSender.getCapabilities('video');
+            console.log("default video codecs ");
+            codecs.forEach((v) => {
+                console.log(v.mimeType);
+            })
+            codecs.sort((a, b) => codecPriority(a.mimeType) - codecPriority(b.mimeType));
+            console.log("ordered video codecs ")
+            codecs.forEach((v) => {
+                console.log(v.mimeType);
+            })
+            const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track === track);
+            transceiver.setCodecPreferences(codecs);
+            console.log('Flipped  video codec');
+        } else {
+            console.log('Default  video codecs');
+        }
+
+    }
 
 function messageDeal(event){
     //console.log("message is ", event.data);
@@ -726,7 +742,6 @@ function candyProt(candy){
             .then(desc => {
                 console.log("offer created",);
                 $("#status").text("Making call to host");
-                desc.sdp = tweakSDP(desc.sdp);
                 pc.setLocalDescription(desc).then( d => sendMessage(fid, mid, desc.type, desc.sdp));
             })
             .catch(e => console.log("offer not created due to ", e) );
@@ -1008,11 +1023,6 @@ function setupAudio() {
 
     async function setRole() {
         cid = $.getUrlVar("clubId");
-        var noptime = $.getUrlVar("noptime");
-        if (noptime) {
-            console.log("skip ptime etc tweak");
-            tweak = false;
-        }
         mid = localStorage['clubId'];
         //var act = $("#action");
         if (!mid) {
