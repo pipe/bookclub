@@ -862,8 +862,6 @@ function setupAudio() {
             }
 
     }
-    //setNoSleep();
-
     // connect to our speakers
     if (initiator){
         var s = getInitiatorSession();
@@ -872,8 +870,9 @@ function setupAudio() {
         s.dcomp.connect(dests);
         // set up play....
         //console.log("local dcomp connected ");
-        document.getElementById("them").srcObject = dests.stream;
-        document.getElementById("them").play();
+        document.getElementById("them_audio").srcObject = dests.stream;
+        document.getElementById("them_audio").muted = false;
+        document.getElementById("them_audio").play();
     }
 
     var promise = new Promise(function (resolve, reject) {
