@@ -576,17 +576,19 @@ Session.prototype.checkLoss = function(){
                         var recvd = d.packetsReceived;
                         var lost = d.packetsLost;
                         var colour = "grey";
+                        /*
                         if (lost > that.lastLoss) {
                             var diffl = lost - that.lastLoss;
                             var diffp = recvd - that.lastRecv;
                             var pct = Math.ceil(100.0 * diffl / diffp);
-                            if (pct > 0) {
+                           f (pct > 0) {
                                 colour = rgb(128 + pct, 128, 128);
                             }
                         }
                         that.lastLoss = lost;
                         that.lastRecv = recvd;
                         style += "background-color:" + colour + "; ";
+                        */
 
                     }
                     if (d.type === "track") {
@@ -834,11 +836,11 @@ function setupAudio() {
         host:
             {
                 audio: {
-                    noiseSuppression: false,
-                    echoCancellation: false,
-                    autoGainControl: false,
+                    noiseSuppression: true,
+                    echoCancellation: true,
+                    autoGainControl: true,
                     channelCount: 1,
-                    googAutoGainControl: false
+                    googAutoGainControl: true
                 },
                 video: {
                     width: {  ideal: 240 },
@@ -866,13 +868,13 @@ function setupAudio() {
     if (initiator){
         var s = getInitiatorSession();
         s.dcomp = myac.createDynamicsCompressor();
-        var dests = myac.createMediaStreamDestination();
-        s.dcomp.connect(dests);
+        //var dests = myac.createMediaStreamDestination();
+        s.dcomp.connect(myac.destination);
         // set up play....
         //console.log("local dcomp connected ");
-        document.getElementById("them_audio").srcObject = dests.stream;
+        /*document.getElementById("them_audio").srcObject = dests.stream;
         document.getElementById("them_audio").muted = false;
-        document.getElementById("them_audio").play();
+        document.getElementById("them_audio").play();*/
     }
 
     var promise = new Promise(function (resolve, reject) {
