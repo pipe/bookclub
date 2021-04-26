@@ -133,7 +133,6 @@
     // import Robohash from './robohash/robohash.min.js';
 
     var properties = {
-websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
 };
 
 
@@ -161,8 +160,6 @@ var cid;
 var myac;
 var initiator;
 var localStream;
-//var localdcomp;
-//var localpanned;
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -232,8 +229,6 @@ function Session(id,lpan) {
     this.video = null; // media elememt we will connect remote video
     this.audioLevel =0.0;
     this.place = {x:0,y:0,w:100,h:100};
-    //this.img = null;
-    //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
         this.place = places.pop();
@@ -251,15 +246,6 @@ function Session(id,lpan) {
         var canvas = document.getElementById("brady");
         var height = canvas.clientHeight;
         var width = Math.min(canvas.clientWidth / 10, height * 0.75);
-        // add an audio tag per recipient because chrome needs some suckage on the pipe...
-        /*if (isChrome) {
-            this.audio = document.createElement("audio");
-            //this.audio.setAttribute("style","display: none;");
-            this.audio.muted = true;
-            this.audio.setAttribute("autoplay", "true");
-            ;
-            this.rdiv.appendChild(this.audio);
-        }*/
         this.video = document.createElement("video");
         this.video.muted = true;
         this.video.setAttribute("autoplay", "true");
@@ -358,12 +344,6 @@ Session.prototype.stopSession = function() {
         this.pc = null;
     }
     if (this.rdiv) {
-        /*
-        if (this.audio) {
-            this.audio.srcObject = null;
-            this.audio.pause();
-            this.rdiv.removeChild(this.audio);
-        }*/
         if (this.video) {
             this.video.srcObject = null;
             this.video.pause();
@@ -377,7 +357,7 @@ Session.prototype.stopSession = function() {
 };
 Session.prototype.setupRTC = function(){
     console.log("setting up webRTC for "+this.fid);
-    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
+    this.pc = new RTCPeerConnection(properties.configuration, null);
     this.pc.onicecandidate = (e) => {
             console.log("local ice candidate", e.candidate);
             if (e.candidate != null) {
@@ -454,17 +434,10 @@ Session.prototype.setupRTC = function(){
             this.statusChannel.onopen = (ev) => {
                 console.log("got open datachannel from " +this.fid);
                 that.tellAll();
-                // don't tell them about us.
-                // that.statusChannel.send(JSON.stringify({act: 'add', fid: cid, pan: "0"}));
             };
             var that = this;
             this.statusChannel.onmessage = (ev) => {
                 console.log("got data on datachannel from " +that.fid);
-                /*var mess = JSON.parse(ev.data);
-                if (mess.id == that.fid){
-                    console.log("setting image data");
-                    that.setImage(mess.img);
-                } */
             }
 
         };
@@ -547,8 +520,6 @@ Session.prototype.tellAll = function() {
             this.checker = window.setInterval(function () {
                 that.checkLoss();
             }, 1000);
-
-
             // audio together here.
             // depends on role
             console.log('Audio sample Rate is ' + myac.sampleRate);
@@ -808,16 +779,32 @@ function candyProt(candy){
             audioTracks[0].enabled = !m;
         }
     }
-/*
-    function repaintDuration(){
-        var diff = Date.now() - startRecTime;
-        console.log ("data on at "+diff);
-        var mins = Math.floor(diff / 60000);
-        var secs = Math.floor((diff % 60000) / 1000);
-        $("#duration").text(""+mins+":"+secs);
-    }
-*/
 
+    function loadProps() {
+        var that = {configUrl:"pipeconfig.json"};
+        var promise = new Promise(function (resolve, reject) {
+            var xobj = new XMLHttpRequest();
+            xobj.overrideMimeType("application/json");
+            xobj.open('GET', that.configUrl, true);
+            xobj.onreadystatechange = function () {
+                if (xobj.readyState == 4 && xobj.status == "200") {
+                    var pipeconfig = JSON.parse(xobj.responseText);
+                    console.log("Config is " + xobj.responseText);
+                    if (pipeconfig.ice) {
+                        that.configuration = pipeconfig.ice;
+                        console.log("Set ICE params " + JSON.stringify(that.configuration));
+                    }
+                    if (pipeconfig.wsurl) {
+                        that.wsurl = pipeconfig.wsurl;
+                        console.log("Set wsurl " + JSON.stringify(that.wsurl));
+                    }
+                    resolve(that);
+                }
+            };
+            xobj.send(null);
+        });
+        return promise;
+    }
 function captureCanvas(){
     var can = document.getElementById("brady");
     mcu = can.captureStream(15);
@@ -847,11 +834,11 @@ function setupAudio() {
         guest:
             {
                 audio: {
-                    noiseSuppression: false,
-                    echoCancellation: false,
-                    autoGainControl: false,
+                    noiseSuppression: true,
+                    echoCancellation: true,
+                    autoGainControl: true,
                     channelCount: 1,
-                    googAutoGainControl: false
+                    googAutoGainControl: true
                 }, video: {
                     width: {  ideal: 240 },
                     height: { ideal: 320 },
@@ -1019,7 +1006,7 @@ function setupAudio() {
 // change their mind, if their circumstances have changed since the invite was sent.
 
 
-    function setRole() {
+    async function setRole() {
         cid = $.getUrlVar("clubId");
         var noptime = $.getUrlVar("noptime");
         if (noptime) {
@@ -1051,7 +1038,8 @@ function setupAudio() {
             // this has the effect of getting our id into the browser bar -
             // making it easy to share etc.
         } else {
-            socket = new WebSocket( properties.websocketURL + mid);
+            properties = await loadProps();
+            socket = new WebSocket( properties.wsurl + mid);
             socket.onmessage = messageDeal;
             socket.onopen = (_) => {
                 var url = document.location.href;
@@ -1112,14 +1100,9 @@ function setupAudio() {
         $("#vids").hide();
         $("#recordCall").hide();
 
-
-
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
         document.getElementById("recordCall").onclick = recordCall;
-
-        //document.getElementById("me").onclick = toggleplay;
-
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));

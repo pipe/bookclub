@@ -1,0 +1,12 @@
+{
+  "oem": "|pipe|",
+  "version": "0.0.1",
+  "ice":{
+    "iceServers": [
+      {"urls": "stun:stun4.l.google.com:19302"},
+      {"urls": "turn:146.148.121.175:3478?transport=udp", "credential": "nexus5x", "username": "smartphone"}
+    ],
+    "bundlePolicy": "max-bundle", "iceCandidatePoolSize": 2
+  },
+  "wsurl":"wss://pi.pe/websocket/?finger="
+}
