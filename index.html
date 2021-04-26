@@ -36,6 +36,8 @@
             <div class="col" id="0.9"></div>
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
+        <audio id="them_audio" style="width:100%;height:fit-content;" autoplay playsinline muted > </audio>
+
     </div>
 
 
@@ -498,29 +500,6 @@ Session.prototype.tellAll = function() {
                 this.panned.pan.value = this.pan;
                 console.log("panned to " + this.pan);
                 this.peerin.connect(this.panned);
-/*
-                // now connect panned to :
-                // local destination...
-
-                // plug the panned output into our dcomp so we get the stereo effect as host.
-                var ld = localDcomp();
-                if (ld != null) {
-                    this.panned.connect(ld);
-                } else {
-                    console.log("nowhere to plug " + this.fid);
-                }
-
-
-                // outbound
-                // for now just add the localpanned stream
-
-                const lp =localPanned();
-                if (lp) {
-                    lp.connect(this.dcomp);
-                    console.log("connect local stream to dcomp");
-                }
-                // local dcomp and local panned are now in the session[cid]
-*/
                 this.dcomp = myac.createDynamicsCompressor();
                 var that = this;
                 Object.entries(sessions).forEach(sessionkva => {
@@ -581,28 +560,24 @@ Session.prototype.tellAll = function() {
         } else {
             if (kind.indexOf("audio") != -1) {
                 console.log("added remote "+kind+" stream to audio");
-                var au = document.getElementById("audio");
+                var au = document.getElementById("them_audio");
+                au.muted = false;
                 au.srcObject = stream;
-                au.play();
             } else {
                 var them = document.getElementById("them");
-                if (them.srcObject == null) {
-                    console.log("added remote " + kind + " stream to videotag");
-                    them.srcObject = stream;
-                    $("#them").show();
-                }
+                console.log("added remote " + kind + " stream to videotag");
+                them.srcObject = stream;
+                $("#them").show();
             }
         }
 
     };
 
-    Session.prototype.addVstream = function(stream) {
-        // note that these only exist because chrome is weird and needs an audio tag
-        // which can (and should) be muted - so this makes no sound. - also video now
-        if (isChrome) {
+    Session.prototype.addVstream = function(stream,kind) {
+        if (isChrome && (kind ==="video")) {
             this.video.srcObject = stream;
             this.video.play();
-            console.log("added stream to muted local media object for chrome"+this.video.muted);
+            console.log("added stream to muted local media object for chrome"+this.video.muted," kind ="+kind);
         }
         var that = this;
 
@@ -612,7 +587,6 @@ Session.prototype.tellAll = function() {
             canv2d.drawImage(that.video, 0, 0,vw,vh, that.place.x, that.place.y,that.place.w,that.place.h);
             requestAnimationFrame(drawToCanvas);
         }
-        //console.log("drawing video at " + x);
         drawToCanvas();
     };
 
@@ -912,10 +886,9 @@ function setupAudio() {
                     s.panned.pan.value = 0.0;
                     console.log("local stream panned to 0.0 ");
                     localsrc.connect(s.panned);
-                    sessions[mid].addVstream(stream);
+                    sessions[mid].addVstream(stream,"video");// half truth.
                     $("#brady").show();
                     $("#recordCall").show();
-
                     $("#them").muted = true;
                     captureCanvas();
                 } else {
