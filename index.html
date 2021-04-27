@@ -549,7 +549,7 @@ Session.prototype.tellAll = function() {
     };
 
     Session.prototype.addVstream = function(stream,kind) {
-        if (isChrome && (kind ==="video")) {
+        if (kind ==="video") {
             this.video.srcObject = stream;
             this.video.play();
             console.log("added stream to muted local media object for chrome"+this.video.muted," kind ="+kind);
