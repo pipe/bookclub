@@ -304,12 +304,8 @@ Session.prototype.stopSession = function() {
             }
         });
     }
-    const lp = localPanned();
-    if (lp){
-        lp.disconnect(this.dcomp);
-    }
+
     if (this.panned != null) {
-        this.panned.disconnect(localDcomp());
         this.panned = null;
         pans.push(this.pan);
         places.push(this.place);
