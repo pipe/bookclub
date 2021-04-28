@@ -866,13 +866,13 @@ function setupAudio() {
     if (initiator){
         var s = getInitiatorSession();
         s.dcomp = noDecomp ? myac.createGain():myac.createDynamicsCompressor();
-        //var dests = myac.createMediaStreamDestination();
-        s.dcomp.connect(myac.destination);
+        var dests = myac.createMediaStreamDestination();
+        s.dcomp.connect(dests);
         // set up play....
-        //console.log("local dcomp connected ");
-        /*document.getElementById("them_audio").srcObject = dests.stream;
+        console.log("local dcomp connected ");
+        document.getElementById("them_audio").srcObject = dests.stream;
         document.getElementById("them_audio").muted = false;
-        document.getElementById("them_audio").play();*/
+        document.getElementById("them_audio").play();
     }
 
     var promise = new Promise(function (resolve, reject) {
