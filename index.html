@@ -833,13 +833,13 @@ function setupAudio() {
     const gumConstraints = {
         host:
             {
-                audio: {
+                audio: true /*{
                     noiseSuppression: true,
                     echoCancellation: true,
                     autoGainControl: true,
                     channelCount: 1,
                     googAutoGainControl: true
-                },
+                }*/,
                 video: {
                     width: {  ideal: 240 },
                     height: { ideal: 320 },
@@ -848,13 +848,13 @@ function setupAudio() {
             },
         guest:
             {
-                audio: {
+                audio:true/* {
                     noiseSuppression: true,
                     echoCancellation: true,
                     autoGainControl: true,
-                    channelCount: 1,
+                    //channelCount: 1,
                     googAutoGainControl: true
-                }, video: {
+                }*/, video: {
                     width: {  ideal: 240 },
                     height: { ideal: 320 },
                     frameRate: {ideal: 15},
