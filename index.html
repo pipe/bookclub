@@ -170,6 +170,8 @@ var chunks = [];
 var saved = false;
 var startRecTime = 0;
 
+const noDecomp = true;
+
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
@@ -472,7 +474,7 @@ Session.prototype.tellAll = function() {
                 this.panned.pan.value = this.pan;
                 console.log("panned to " + this.pan);
                 this.peerin.connect(this.panned);
-                this.dcomp = myac.createDynamicsCompressor();
+                this.dcomp = noDecomp ? myac.createGain():myac.createDynamicsCompressor();
                 var that = this;
                 Object.entries(sessions).forEach(sessionkva => {
                     var id = sessionkva[0];
@@ -863,7 +865,7 @@ function setupAudio() {
     // connect to our speakers
     if (initiator){
         var s = getInitiatorSession();
-        s.dcomp = myac.createDynamicsCompressor();
+        s.dcomp = noDecomp ? myac.createGain():myac.createDynamicsCompressor();
         //var dests = myac.createMediaStreamDestination();
         s.dcomp.connect(myac.destination);
         // set up play....
