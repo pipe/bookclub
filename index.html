@@ -472,7 +472,7 @@ Session.prototype.tellAll = function() {
                 // inbound....
                 this.peerin = myac.createMediaStreamSource(stream);
                 this.panned = noPan? myac.createGain(): myac.createStereoPanner();
-                this.panned.pan.value = this.pan;
+                if (!noPan) {this.panned.pan.value = this.pan;}
                 console.log("panned to " + this.pan);
                 this.peerin.connect(this.panned);
                 this.dcomp = noDecomp ? myac.createGain():myac.createDynamicsCompressor();
@@ -885,7 +885,7 @@ function setupAudio() {
                     var localsrc = myac.createMediaStreamSource(stream);
                     s = getInitiatorSession();
                     s.panned = noPan?myac.createGain(): myac.createStereoPanner();
-                    s.panned.pan.value = 0.0;
+                    if (!noPan) {s.panned.pan.value = 0.0;}
                     console.log("local stream panned to 0.0 ");
                     localsrc.connect(s.panned);
                     sessions[mid].addVstream(stream,"video");// half truth.
