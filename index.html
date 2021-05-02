@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Bookclub session</title>
+    <title>Distributed Future Podcast</title>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -17,11 +17,11 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
-<a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
+<a href="index.html"><h1 id="title" class="text-center">Distributed Future Podcast</h1></a>
 
 <div class="card container-fluid all">
     <div id="remotes" class="card-header" >
-        <canvas id="brady" width="1024" height="1024"></canvas>
+        <canvas id="brady" width="1080" height="160"></canvas>
         <div id="vids" class="row no-gutters" >
             <div class="col" id="-0.9"></div>
             <div class="col" id="-0.8"></div>
@@ -37,6 +37,7 @@
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
         <audio id="them_audio" style="width:100%;height:fit-content;" autoplay playsinline muted > </audio>
+        <img src="https://distributedfutu.re/img/dist.jpg"/><img src="https://distributedfutu.re/img/dist.jpg"/>
 
     </div>
 
@@ -125,32 +126,8 @@
     </div>
 </div>
 
-
-<!--video id="nosleep" width="1" playsinline muted>
-    Antisleep video.
-</video-->
 <script>
-    // import Robohash from './robohash/robohash.min.js';
-
     var properties = {
-};
-
-
-
-var webRTCconfiguration = {
-    host : {
-        "iceServers": [
-            {urls: "stun:146.148.121.175:3478"},
-            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
-        ],
-        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
-    },
-    guest: {
-        "iceServers": [
-            {urls: "stun:146.148.121.175:3478"},
-        ],
-        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
-    }
 };
 
 
@@ -164,7 +141,6 @@ var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
-var isChrome = ("chrome" in window);
 var recorder;
 var chunks = [];
 var saved = false;
@@ -173,24 +149,24 @@ var startRecTime = 0;
 const noDecomp = false;
 const noPan = false;
 
-    //var myImage = null;
-// really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
-
+var bradySize={w:120,h:160};
 var pans = [ 0.2, -0.2, 0.6 , -0.6, 0.8, -0.8, 0.4, -0.4, 0.0];
-var places = [
-    {x:80,y:825,w:150,h:175},
-    {x:250,y:825,w:150,h:175},
-    {x:420,y:825,w:150,h:175},
-    {x:590,y:825,w:150,h:175},
-    {x:170,y:10,w:150,h:175},
-    {x:770,y:10,w:150,h:175},
-    {x:600,y:10,w:150,h:175},
-    {x:10,y:10,w:150,h:175},
-    {x:330,y:10,w:250,h:325}
-]
+var places = []
 var canv2d = document.getElementById("brady").getContext( '2d' );
 var mcu;
 
+function setPlaces(){
+    let w = bradySize.w*pans.length;
+    let min = pans.reduce((p,c)=> { return (p<c)?p:c;});
+    console.log("min = "+min);
+    min = min *-1.0;
+    places = pans.map((v) => {
+        let x = Math.floor(w*(v+min)/2.0);
+        console.log("pan = "+v+" x="+x);
+        let p = {x:x,y:10,w:bradySize.w,h:bradySize.h};
+        return p;
+    });
+}
 function getInitiatorSession(){
     var ret = null;
     if (initiator){
@@ -957,13 +933,7 @@ function setupAudio() {
         $("#recordCall").text(""+mins+":"+secs);
     }
     function drawDrop(){
-        var img=new Image();
-        img.onload=function(){
-            canv2d.canvas.width=1024;
-            canv2d.canvas.height=1024;
-            canv2d.drawImage(img,0,0,img.width,img.height,0,0,1024,1024);
-        }
-        img.src="fhp2.jpeg";
+        canv2d.clear();
     }
     function recordCall() {
         if (!recorder) {
@@ -1102,6 +1072,7 @@ function setupAudio() {
     });
 
     $( document ).ready( _ => {
+        setPlaces();
         $("#chosenAction").hide();
         $("#packetLoss").hide();
         $("#statsZone").hide();
