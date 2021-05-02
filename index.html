@@ -799,7 +799,7 @@ function candyProt(candy){
     }
 function captureCanvas(){
     var can = document.getElementById("brady");
-    mcu = can.captureStream(15);
+    mcu = can.captureStream(5);
     console.log("captured canvas stream");
 }
 
@@ -820,7 +820,7 @@ function setupAudio() {
                 video: {
                     width: {  ideal: 240 },
                     height: { ideal: 320 },
-                    frameRate: {ideal: 15},
+                    frameRate: {ideal: 5},
                 }
             },
         guest:
@@ -832,9 +832,9 @@ function setupAudio() {
                     //channelCount: 1,
                     googAutoGainControl: true
                 }*/, video: {
-                    width: {  ideal: 240 },
-                    height: { ideal: 320 },
-                    frameRate: {ideal: 15},
+                    width: {  ideal: bradySize.w },
+                    height: { ideal: bradySize.h },
+                    frameRate: {ideal: 5},
                 }
             }
 
@@ -928,7 +928,6 @@ function setupAudio() {
     function repaintDuration(){
         var diff = Date.now() - startRecTime;
         console.log ("data on at "+diff);
-        var mins = Math.floor(diff / 60000);
         var secs = Math.floor((diff % 60000) / 1000);
         $("#recordCall").text(""+mins+":"+secs);
     }
