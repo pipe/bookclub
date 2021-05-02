@@ -933,7 +933,7 @@ function setupAudio() {
         $("#recordCall").text(""+mins+":"+secs);
     }
     function drawDrop(){
-        canv2d.clear();
+        canv2d.fillRect(0,0,canv2d.canvas.width,canv2d.canvas.height);
     }
     function recordCall() {
         if (!recorder) {
