@@ -929,6 +929,7 @@ function setupAudio() {
         var diff = Date.now() - startRecTime;
         console.log ("data on at "+diff);
         var secs = Math.floor((diff % 60000) / 1000);
+        var mins = Math.floor(diff / 60000);
         $("#recordCall").text(""+mins+":"+secs);
     }
     function drawDrop(){
