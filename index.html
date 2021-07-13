@@ -73,6 +73,10 @@
     <div class="card-footer">
         <h2><span class="badge badge-primary" id="role"></span><span class="badge badge-primary" id="status"></span></h2>
         <!--div style="width: 80px; height: 80px;" id="me">me</div-->
+        <br/>
+        <span>See our <a href="https://github.com/pipe/bookclub">Github</a> for source code</span>
+        <span>See also <a href="https://pi.pe/privacy_policy/index.html">Privacy</a>
+       and <a href="https://pi.pe/impressum/index.html">Impressum</a></span>
     </div>
 
 </div>
@@ -166,33 +170,8 @@
 </div>
 
 
-<!--video id="nosleep" width="1" playsinline muted>
-    Antisleep video.
-</video-->
 <script type="module">
-    // import Robohash from './robohash/robohash.min.js';
 
-    var properties = {
-websocketURL: "wss://pi.pe/websocket/?finger=" // where to find the redezvous server.
-};
-
-
-
-var webRTCconfiguration = {
-    host : {
-        "iceServers": [
-            {urls: "stun:146.148.121.175:3478"},
-            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
-        ],
-        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
-    },
-    guest: {
-        "iceServers": [
-            {urls: "stun:146.148.121.175:3478"},
-        ],
-        "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
-    }
-};
 
 
 var socket; // used to set up connection with our peers.
@@ -213,6 +192,8 @@ var recorder;
 var chunks = [];
 var saved = false;
 var startRecTime = 0;
+var properties = {};
+
 
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
@@ -365,7 +346,7 @@ Session.prototype.stopSession = function() {
 };
 Session.prototype.setupRTC = function(){
     console.log("setting up webRTC for "+this.fid);
-    this.pc = new RTCPeerConnection(webRTCconfiguration[initiator ? "host" : "guest"], null);
+    this.pc = new RTCPeerConnection(properties.configuration, null);
     this.pc.onicecandidate = (e) => {
             console.log("local ice candidate", e.candidate);
             if (e.candidate != null) {
@@ -1032,6 +1013,32 @@ function setupAudio() {
         noShareApp();
     }
 
+    function loadProps() {
+        var that = {configUrl: "pipeconfig.json"};
+        var promise = new Promise(function (resolve, reject) {
+            var xobj = new XMLHttpRequest();
+            xobj.overrideMimeType("application/json");
+            xobj.open('GET', that.configUrl, true);
+            xobj.onreadystatechange = function () {
+                if (xobj.readyState == 4 && xobj.status == "200") {
+                    var pipeconfig = JSON.parse(xobj.responseText);
+                    console.log("Config is " + xobj.responseText);
+                    if (pipeconfig.ice) {
+                        that.configuration = pipeconfig.ice;
+                        console.log("Set ICE params " + JSON.stringify(that.configuration));
+                    }
+                    if (pipeconfig.wsurl) {
+                        that.wsurl = pipeconfig.wsurl;
+                        console.log("Set wsurl " + JSON.stringify(that.wsurl));
+                    }
+                    resolve(that);
+                }
+            };
+            xobj.send(null);
+        });
+        return promise;
+    }
+
 // decide who we are initiator or recpient.
 // notice that the actual call goes in the reverse direction
 // the recipient of the invite actually creates the audiobearing peerconnection
@@ -1039,7 +1046,7 @@ function setupAudio() {
 // change their mind, if their circumstances have changed since the invite was sent.
 
 
-    function setRole() {
+    async function setRole() {
         cid = $.getUrlVar("clubId");
         mid = localStorage['clubId'];
         //var act = $("#action");
@@ -1066,7 +1073,8 @@ function setupAudio() {
             // this has the effect of getting our id into the browser bar -
             // making it easy to share etc.
         } else {
-            socket = new WebSocket( properties.websocketURL + mid);
+            properties = await loadProps();
+            socket = new WebSocket( properties.wsurl + mid);
             socket.onmessage = messageDeal;
             socket.onopen = (_) => {
                 var url = document.location.href;
