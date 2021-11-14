@@ -62,12 +62,17 @@
     <video id="bookVideo" muted autoplay="true" class="card-img-top" poster="fhp2.jpeg">Book goes here</video>
 
     <div class="card-body">
+
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
             <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
                 Record Call
             </button>
+        </div>
+        <div class="card-img-bottom row">
+            <div class="col"><img style="width:inherit;" src="rosefront.JPG" ></img> </div>
+            <div class="col"><img style="width:inherit;" src="roseback.JPG"></img></div>
         </div>
     </div>
     <div class="card-footer">
@@ -611,6 +616,22 @@ Session.prototype.tellAll = function() {
         drawToCanvas();
     };
 
+Session.prototype.sendNewTrack = function(videoTrack){
+    sessions.forEach((id,session) => {
+        if (id !== this.fid) {
+            let sender = session.pc.getSenders().find(function(s) {
+                return ((!s.track) || ( s.track.kind === "video"));
+            });
+            if (sender) {
+                sender.replaceTrack(videoTrack);
+            } else {
+                session.pc.addTrack(videoTrack);
+            }
+        } else {
+            console.log("skip self " + id);
+        }
+    });
+}
 Session.prototype.checkLoss = function(){
     var that = this;
     if (this.pc) {
@@ -835,7 +856,7 @@ function candyProt(candy){
 
 function captureCanvas(){
     var can = document.getElementById("brady");
-    mcu = can.captureStream(5);
+    mcu = can.captureStream(30);
     console.log("captured canvas stream");
 }
 
@@ -846,9 +867,9 @@ function setupAudio() {
 
     //setNoSleep();
     var gumConstraints = {audio: true, video: {
-        width: {  ideal: 240 },
-        height: { ideal: 320 },
-        frameRate: {ideal: 5},
+        width: {  ideal: 480 },
+        height: { ideal: 640 },
+        frameRate: {ideal: 30},
         //aspectRatio: { ideal: 1.7777777778 }
     },};
 
@@ -1173,7 +1194,7 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#them").hide();
         $("#brady").hide();
         $("#vids").hide();
-        //$("#bookVideo").hide();
+        $("#bookVideo").hide();
         $("#recordCall").hide();
 
 
