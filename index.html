@@ -39,7 +39,7 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" crossorigin="anonymous"></script>
 <a href="index.html"><h1 id="title" class="text-center">Bookclub session</h1></a>
 
-<div class="card container-fluid all">
+<div class="card container-fluid all" style="background: transparent;">
     <div id="remotes" class="card-header" >
         <canvas id="brady" width="1200" height="150"></canvas>
         <div id="vids" class="row no-gutters" >
@@ -258,7 +258,7 @@ Session.prototype.offerDeal = function (data) {
     this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
         this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
-            ans.sdp = tweakSDP(ans.sdp);
+            //ans.sdp = tweakSDP(ans.sdp);
             this.pc.setLocalDescription(ans).then(_ =>
                 sendMessage(this.fid, mid, "answer", ans.sdp)
             )
@@ -800,7 +800,7 @@ function candyProt(candy){
             .then(desc => {
                 console.log("offer created",);
                 $("#status").text("Making call to host");
-                desc.sdp = tweakSDP(desc.sdp);
+                //desc.sdp = tweakSDP(desc.sdp);
                 pc.setLocalDescription(desc).then( d => sendMessage(fid, mid, desc.type, desc.sdp));
             })
             .catch(e => console.log("offer not created due to ", e) );
