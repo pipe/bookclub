@@ -369,6 +369,11 @@ Session.prototype.setupRTC = function(){
         };
         this.pc.oniceconnectionstatechange = (e) => {
             console.log("ice state is changed", this.pc.iceConnectionState);
+            if (this.pc.iceConnectionState === "connected"){
+                console.log(this.pc.getTransceivers());
+                var send = this.pc.getTransceivers().find( (tr) => tr.sender && tr.sender.track.kind==="audio").sender;
+                tweakOpus(send);
+            }
             /*
              "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
              "checking"	The ICE agent has been given one or more remote candidates and is checking pairs of local and remote candidates against one another to try to find a compatible match, but has not yet found a pair which will allow the peer connection to be made. It's possible that gathering of candidates is also still underway.
@@ -525,6 +530,9 @@ Session.prototype.tellAll = function() {
                     if (mcu) {
                         mcu.getTracks().forEach(track => {
                             pc.addTrack(track, mcu);
+                            if (track.kind === "video") {
+                                flipCodecOrder(pc, track);
+                            }
                             console.log("added mcu outbound track ", track.id, track.kind, track.label);
                         });
                     }
@@ -867,8 +875,8 @@ function setupAudio() {
 
     //setNoSleep();
     var gumConstraints = {audio: true, video: {
-        width: {  ideal: 480 },
-        height: { ideal: 640 },
+        width: {  ideal: 240 },
+        height: { ideal: 320 },
         frameRate: {ideal: 30},
         //aspectRatio: { ideal: 1.7777777778 }
     },};
@@ -910,6 +918,9 @@ function setupAudio() {
                         stream.getTracks().forEach(track => {
                             pc.addTrack(track, stream);
                             console.log("added local track ", track.id, track.kind);
+                            if (track.kind === "video") {
+                                flipCodecOrder(pc, track);
+                            }
                         });
                     } else {
                         pc.addStream(stream);
@@ -1126,6 +1137,52 @@ function setupAudio() {
             };
         }
     }
+
+function codecPriority(codecMime){
+    var ret = 2;
+    if (codecMime.includes("h264") || codecMime.includes("H264")){
+        ret = 1;
+    } else if (codecMime.includes("h265") || codecMime.includes("H265")){
+        ret =0;
+    }
+    return ret;
+}
+
+function tweakOpus(send) {
+    if(!mungeing) {
+        const paras = send.getParameters();
+        console.log("initial audio encoder params");
+        console.log(paras);
+        if ((paras) && (paras.encodings)) {
+            paras.encodings[0].maxBitrate = 64000;
+            //paras.encodings[0].ptime = 60;
+            send.setParameters(paras);
+            console.log(paras);
+        }
+    }
+}
+function flipCodecOrder(pc,track){
+    if (!mungeing) {
+        if (RTCRtpSender.getCapabilities) {
+            const {codecs} = RTCRtpSender.getCapabilities('video');
+            console.log("default video codecs ");
+            codecs.forEach((v) => {
+                console.log(v.mimeType);
+            })
+            codecs.sort((a, b) => codecPriority(a.mimeType) - codecPriority(b.mimeType));
+            console.log("ordered video codecs ")
+            codecs.forEach((v) => {
+                console.log(v.mimeType);
+            })
+            const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track === track);
+            transceiver.setCodecPreferences(codecs);
+            console.log('Flipped  video codec');
+        } else {
+            console.log('Default  video codecs');
+        }
+    }
+}
+
     function getSize(stream){
         var settings = null;
         var vtracks = stream.getVideoTracks();
