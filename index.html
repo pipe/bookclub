@@ -41,7 +41,7 @@
 
 <div class="card container-fluid all" style="background: transparent;">
     <div id="remotes" class="card-header" >
-        <canvas id="brady" width="1200" height="150"></canvas>
+        <canvas id="brady" width="1200" height="700"></canvas>
         <div id="vids" class="row no-gutters" >
             <div class="col" id="-0.9"></div>
             <div class="col" id="-0.8"></div>
@@ -204,8 +204,17 @@ const mungeing = false;
     //var myImage = null;
 // really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
 
-var pans = [ 0.9, -0.9, 0.2, -0.2, 0.6 , -0.6, 0.8, -0.8, 0.4, -0.4, 0.0];
-
+var pans = [ -0.6, -0.2, 0.2, 0.6 , -0.8, -0.4, 0.4, 0.8];
+var places = [
+    {x:0,y:350,w:240,h:320},
+    {x:300,y:350,w:240,h:320},
+    {x:600,y:350,w:240,h:320},
+    {x:900,y:350,w:240,h:320},
+    {x:0,y:24,w:240,h:320},
+    {x:300,y:24,w:240,h:320},
+    {x:600,y:24,w:240,h:320},
+    {x:900,y:24,w:240,h:320}
+]
 var canv2d = document.getElementById("brady").getContext( '2d' );
 var mcu;
 
@@ -221,10 +230,12 @@ function Session(id,lpan) {
     this.statusChannel = null;
     this.audio = null;
     this.audioLevel =0.0;
+    this.place = {};
     //this.img = null;
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
+        this.place = places.pop();
         console.log("created peer connection for " + id);
         this.lcandyStash = [];
     } else {
@@ -236,7 +247,7 @@ function Session(id,lpan) {
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
     var canvas = document.getElementById("brady");
-    var height = canvas.clientHeight;
+    var height = canvas.clientHeight/2;
     var width = Math.min(canvas.clientWidth /10,height*0.75);
 
     if (initiator) {
@@ -245,8 +256,8 @@ function Session(id,lpan) {
         //this.audio.setAttribute("style","display: none;");
         this.audio.muted = true;
         this.audio.setAttribute("autoplay","true");
-        this.audio.setAttribute("width",width);
-        this.audio.setAttribute("height",height);
+        this.audio.setAttribute("width",this.place.width);
+        this.audio.setAttribute("height",this.place.height);
         console.log("Set video width x height to "+width+" x "+height);
         this.rdiv.appendChild(this.audio);
         this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
@@ -254,6 +265,7 @@ function Session(id,lpan) {
     //Robohash.render(this.fid,this.rdiv);
     remoteslot.appendChild(this.rdiv);
 };
+
 Session.prototype.offerDeal = function (data) {
     this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
@@ -309,6 +321,7 @@ Session.prototype.stopSession = function() {
         this.panned.disconnect(localdcomp);
         this.panned = null;
         pans.push(this.pan);
+        places.push(this.place);
     }
     if (this.dcomp != null) {
         this.dcomp.disconnect();
@@ -388,7 +401,7 @@ Session.prototype.setupRTC = function(){
                 this.stopSession();
             }
             if (this.pc.iceConnectionState === "disconnected"){
-                this.stopSession();
+                console.log("ice disconnected");
             }
         };
         // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
@@ -602,21 +615,9 @@ Session.prototype.tellAll = function() {
         var that = this;
 
         var drawToCanvas = function () {
-            // draw the current frame of localVideo onto the canvas,
-            // starting at 0, 0 (top-left corner) and covering its full
-            // width and heigth
-            var cw = canv2d.canvas.clientWidth;
-            var ch = canv2d.canvas.clientHeight;
             var vh = that.audio.videoHeight;
             var vw = that.audio.videoWidth;
-            var rat = vw/vh;
-            var rw = Math.floor(ch *rat);
-            var abspan = (1.0 +that.pan) / 2 ;
-            var x = Math.floor((cw * abspan) - vw/2);
-// void ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-
-            canv2d.drawImage(that.audio, 0, 0,vw,vh, x,0,rw,ch);
-            //console.log("drawing video for +"+that.fid+ " at " + x);
+            canv2d.drawImage(that.audio, 0, 0,vw,vh, that.place.x, that.place.y,that.place.w,that.place.h);
             //repeat this every time a new frame becomes available using
             //the browser's build-in requestAnimationFrame method
             requestAnimationFrame(drawToCanvas);
