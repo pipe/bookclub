@@ -230,12 +230,20 @@ function Session(id,lpan) {
     this.statusChannel = null;
     this.audio = null;
     this.audioLevel =0.0;
-    this.place = {};
+    this.place = {x:0,y:0,w:0,h:0};
     //this.img = null;
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
         this.place = places.pop();
+        if (!this.place){
+            console.log("too many users for video...");
+            this.place = {x:0,y:0,w:0,h:0};
+        }
+        if (!this.pan){
+            console.log("pan audio to center ...");
+            this.pan = 0.0;
+        }
         console.log("created peer connection for " + id);
         this.lcandyStash = [];
     } else {
@@ -353,9 +361,14 @@ Session.prototype.stopSession = function() {
     if (this.rdiv) {
         this.audio.srcObject = null;
         this.audio.pause();
-        this.rdiv.removeChild(this.audio);
+        var rd = this.audio.parentNode;
+        if (rd){
+            rd.removeChild(this.audio);
+        }
         var remotes = this.rdiv.parentNode;
-        remotes.removeChild(this.rdiv);
+        if (remotes) {
+            remotes.removeChild(this.rdiv);
+        }
     }
     var cw = canv2d.canvas.width;
     var ch = canv2d.canvas.height;
@@ -398,10 +411,20 @@ Session.prototype.setupRTC = function(){
              "closed"
              */
             if (this.pc.iceConnectionState === "failed"){
+                console.log("ice failed");
+                this.stopSession();
+            }
+            if (this.pc.iceConnectionState === "closed"){
+                console.log("ice closed");
                 this.stopSession();
             }
             if (this.pc.iceConnectionState === "disconnected"){
                 console.log("ice disconnected");
+                setTimeout(() => {
+                    if (this.pc.iceConnectionState != "connected"){
+                        this.stopSession();
+                    }
+                },5000);
             }
         };
         // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
@@ -459,7 +482,10 @@ Session.prototype.setupRTC = function(){
                     that.setImage(mess.img);
                 } */
             }
-
+            this.statusChannel.onclose = (ev) => {
+                console.log("lost datachannel from " +that.fid);
+                this.stopSession();
+            }
         };
 };
 Session.prototype.tellAll = function() {
