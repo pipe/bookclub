@@ -71,8 +71,8 @@
             </button>
         </div>
         <div class="card-img-bottom row">
-            <div class="col"><img style="width:inherit;" src="rosefront.JPG" ></img> </div>
-            <div class="col"><img style="width:inherit;" src="roseback.JPG"></img></div>
+            <div class="col"><img style="width:inherit;" src="front.JPG" ></img> </div>
+            <div class="col"><img style="width:inherit;" src="back.JPG"></img></div>
         </div>
     </div>
     <div class="card-footer">
@@ -826,9 +826,20 @@ function candyProt(candy){
         pc.createOffer(peerConnectionOfferAnswerCriteria)
             .then(desc => {
                 console.log("offer created",);
-                $("#status").text("Making call to host");
                 //desc.sdp = tweakSDP(desc.sdp);
-                pc.setLocalDescription(desc).then( d => sendMessage(fid, mid, desc.type, desc.sdp));
+                pc.setLocalDescription(desc).then( d => {
+                    sendMessage(fid, mid, desc.type, desc.sdp);
+                    $("#status").text("Making call to host");
+                }).catch (
+                    e => {
+                        console.log("Set Local failed");
+                        // android cant do h264.
+                        /*var t = pc.getLocalStreams()[0].getVideoTracks()[0];
+                        clearCodecOrder(pc,t);
+                        startCall(fid);
+                        */
+                    }
+                );
             })
             .catch(e => console.log("offer not created due to ", e) );
     }
@@ -946,9 +957,9 @@ function setupAudio() {
                         stream.getTracks().forEach(track => {
                             pc.addTrack(track, stream);
                             console.log("added local track ", track.id, track.kind);
-                            if (track.kind === "video") {
-                                flipCodecOrder(pc, track);
-                            }
+                            /*if (track.kind === "video") {
+                                setCodecOrder(pc, track);
+                            }*/
                         });
                     } else {
                         pc.addStream(stream);
@@ -1189,7 +1200,7 @@ function tweakOpus(send) {
         }
     }
 }
-function flipCodecOrder(pc,track){
+function setCodecOrder(pc,track){
     if (!mungeing) {
         if (RTCRtpSender.getCapabilities) {
             const {codecs} = RTCRtpSender.getCapabilities('video');
@@ -1199,6 +1210,22 @@ function flipCodecOrder(pc,track){
             })
             codecs.sort((a, b) => codecPriority(a.mimeType) - codecPriority(b.mimeType));
             console.log("ordered video codecs ")
+            codecs.forEach((v) => {
+                console.log(v.mimeType);
+            })
+            const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track === track);
+            transceiver.setCodecPreferences(codecs);
+            console.log('Flipped  video codec');
+        } else {
+            console.log('Default  video codecs');
+        }
+    }
+}
+function clearCodecOrder(pc,track){
+    if (!mungeing) {
+        if (RTCRtpSender.getCapabilities) {
+            const {codecs} = RTCRtpSender.getCapabilities('video');
+            console.log("default video codecs ");
             codecs.forEach((v) => {
                 console.log(v.mimeType);
             })
