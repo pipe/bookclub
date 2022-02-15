@@ -71,8 +71,8 @@
             </button>
         </div>
         <div class="card-img-bottom row">
-            <div class="col"><img style="width:inherit;" src="front.JPG" ></img> </div>
-            <div class="col"><img style="width:inherit;" src="back.JPG"></img></div>
+            <div class="col"><img style="width:inherit;" src="front.PNG" ></img> </div>
+            <div class="col"><img style="width:inherit;" src="back.PNG"></img></div>
         </div>
     </div>
     <div class="card-footer">
@@ -918,7 +918,9 @@ function setupAudio() {
         height: { ideal: 320 },
         frameRate: {ideal: 30},
         //aspectRatio: { ideal: 1.7777777778 }
-    },};
+    }};
+
+   var fallBackConstraints = {audio: true, video: true};
 
     // connect to our speakers
     if (initiator){
