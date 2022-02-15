@@ -571,7 +571,7 @@ Session.prototype.tellAll = function() {
                         mcu.getTracks().forEach(track => {
                             pc.addTrack(track, mcu);
                             if (track.kind === "video") {
-                                flipCodecOrder(pc, track);
+                                setCodecOrder(pc, track);
                             }
                             console.log("added mcu outbound track ", track.id, track.kind, track.label);
                         });
