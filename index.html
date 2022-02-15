@@ -913,14 +913,14 @@ function setupAudio() {
     myac = new AudioContext();
 
     //setNoSleep();
-    var gumConstraints = {audio: true, video: {
+    var idealConstraints = {audio: true, video: {
         width: {  ideal: 240 },
         height: { ideal: 320 },
         frameRate: {ideal: 30},
         //aspectRatio: { ideal: 1.7777777778 }
     }};
 
-   var fallBackConstraints = {audio: true, video: true};
+   var gumConstraints = {audio: {} ,video: {} };
 
     // connect to our speakers
     if (initiator){
@@ -936,7 +936,7 @@ function setupAudio() {
     }
 
     var promise = new Promise(function (resolve, reject) {
-        navigator.mediaDevices.getUserMedia(gumConstraints)
+        navigator.mediaDevices.getUserMedia(idealConstraints)
             .then((stream) => {
                 localStream = stream;
                 // do magic pan stuff here....
