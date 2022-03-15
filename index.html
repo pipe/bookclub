@@ -18,6 +18,9 @@
             background-size: cover;
             background-repeat: no-repeat;
         }
+        .mirrored {
+            transform: scaleX(-1) ;
+        }
         .footer {
             position: fixed;
             left: 0;
@@ -55,7 +58,8 @@
             <div class="col" id="0.8"></div>
             <div class="col" id="0.9"></div>
         </div>
-        <video id="them" style="width:100%;height:fit-content;" autoplay playsinline > </video>
+        <video id="them" style="width:100%;height:fit-content;" autoplay playsinline ></video>
+        <video id="me" playsinline autoplay muted ></video>
         <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
@@ -71,8 +75,8 @@
             </button>
         </div>
         <div class="card-img-bottom row">
-            <div class="col"><img style="width:inherit;" src="front.PNG" ></img> </div>
-            <div class="col"><img style="width:inherit;" src="back.PNG"></img></div>
+            <div class="col"><img style="width:inherit;" src="https://mcrscifi.files.wordpress.com/2022/02/img_20220220_150844.jpg" ></img> </div>
+            <div class="col"><img style="width:inherit;" src="https://mcrscifi.files.wordpress.com/2022/02/img_20220220_150844.jpg"></img></div>
         </div>
     </div>
     <div class="card-footer">
@@ -529,6 +533,7 @@ Session.prototype.tellAll = function() {
             console.log("skip me " + id);
         }
     });
+    that.statusChannel.send(JSON.stringify({act: 'selfview', place: that.place,ch:700,cw:1200}));
 };
     Session.prototype.addStream = function(stream,kind) {
         if (!kind) {
@@ -892,6 +897,30 @@ function candyProt(candy){
                 if (sess){
                     sess.stopSession();
                 }
+            }
+            if (mo.act =="selfview") {
+                console.log("paint me");
+              /*  var me = document.getElementById("me");
+                me.srcObject = localStream;
+                var them = document.getElementById("them");
+                var resizeMe = () => {
+                    var sx = them.clientWidth/mo.cw;
+                    var sy = them.clientHeight/mo.ch;
+                    var rect = them.getBoundingClientRect();
+                    var mx = Math.floor(mo.place.x * sx);
+                    var my = Math.floor(mo.place.y * sy);
+                    sx *=-1.0;
+                    my -= rect.height;
+                    var mw = Math.floor(mo.place.w * sx);
+                    var mh = Math.floor(mo.place.h * sy);
+                    console.log("resize me");
+                    //
+                    me.setAttribute("style","position:relative; transform:  scale("+sx+","+sy+"); top:"+my+"px; left:"+mx+"px;");
+                }
+                new ResizeObserver(resizeMe).observe(them);
+                //them.onresize = resizeMe;
+                //me.onresize = resizeMe;
+*/
             }
         } else {
             console.log("missing action");
