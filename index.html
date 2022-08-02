@@ -427,8 +427,10 @@ Session.prototype.setupRTC = function(){
             console.log("ice state is changed", this.pc.iceConnectionState);
             if (this.pc.iceConnectionState === "connected"){
                 console.log(this.pc.getTransceivers());
-                var send = this.pc.getTransceivers().find( (tr) => tr.sender && tr.sender.track.kind==="audio").sender;
-                tweakOpus(send);
+                var sendtr = this.pc.getTransceivers().find( (tr) => tr &&  tr.sender && tr.sender.track && tr.sender.track.kind==="audio");
+                if (sendtr) {
+                    tweakOpus(sendtr.sender);
+                }
             }
             /*
              "new"	The ICE agent is gathering addresses or is waiting to be given remote candidates through calls to RTCPeerConnection.addIceCandidate() (or both).
