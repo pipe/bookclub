@@ -44,35 +44,32 @@
 
 <div class="card container-fluid all" style="background: transparent;">
     <div id="remotes" class="card-header" >
-        <canvas id="brady" width="1200" height="700"></canvas>
-        <div id="vids" class="row no-gutters" >
+        <div id="r1" class="row no-gutters" >
             <div class="col" id="-0.9"></div>
-            <div class="col" id="-0.8"></div>
             <div class="col" id="-0.6"></div>
-            <div class="col" id="-0.4"></div>
             <div class="col" id="-0.2"></div>
-            <div class="col" id="0"></div>
             <div class="col" id="0.2"></div>
-            <div class="col" id="0.4"></div>
             <div class="col" id="0.6"></div>
-            <div class="col" id="0.8"></div>
             <div class="col" id="0.9"></div>
+        </div>
+        <div id="r2" class="row no-gutters" >
+            <div class="col" id="-0.8"></div>
+            <div class="col" id="-0.4"></div>
+            <div class="col" id="0"></div>
+            <div class="col" id="0.4"></div>
+            <div class="col" id="0.8"></div>
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline ></video>
         <video id="me" playsinline autoplay muted ></video>
         <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
-    <video id="bookVideo" muted autoplay="true" class="card-img-top" poster="fhp2.jpeg">Book goes here</video>
 
     <div class="card-body">
 
         <div id="chosenAction" class="row justify-content-around">
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
-            <button id="recordCall" type="button" class="btn btn-danger" data-toggle="button" aria-pressed="false" autocomplete="off">
-                Record Call
-            </button>
         </div>
         <div class="card-img-bottom row">
             <div class="col"><img style="width:inherit;" src="front.PNG" ></img> </div>
@@ -108,26 +105,7 @@
         </div>
     </div>
 </div>
-<div id="shareScreen" class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Share the book. </h5>
-            </div>
-            <div class="modal-body" id="sharePrompt">
-                <p>If you have an electronic copy of the book on this computer</p>
-                <p>you can use the 'Share Book' button to select the window containing the book.</p>
-                <p>This will share your view of the book with the other members.</p>
-                <p>If you don't have the book, click 'No e-Book'</p>
-            </div>
-            <div class="modal-footer">
-                <button id="shareMyApp" type="button" class="btn btn-secondary" data-dismiss="modal" >Share Book</button>
-                <button id="noShareApp" type="button" class="btn btn-secondary" data-dismiss="modal" >No e-Book</button>
 
-            </div>
-        </div>
-    </div>
-</div>
 <div id="accept" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -196,30 +174,12 @@ var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToRece
 var AudioContext = window.AudioContext || window.webkitAudioContext;
 var sessions = {};
 var isChrome = ("chrome" in window);
-var bookStream = null;
-var recorder;
-var chunks = [];
-var saved = false;
-var startRecTime = 0;
 var properties = {};
+var cropVideo = null;
 const mungeing = false;
 
 
-    //var myImage = null;
-// really feature detection doesn't do it chrome's webaudio bugs are undetectable from the outside.
-
-var pans = [ -0.6, -0.2, 0.2, 0.6 , -0.8, -0.4, 0.4, 0.8];
-var places = [
-    {x:0,y:350,w:240,h:320},
-    {x:300,y:350,w:240,h:320},
-    {x:600,y:350,w:240,h:320},
-    {x:900,y:350,w:240,h:320},
-    {x:0,y:24,w:240,h:320},
-    {x:300,y:24,w:240,h:320},
-    {x:600,y:24,w:240,h:320},
-    {x:900,y:24,w:240,h:320}
-]
-var canv2d = document.getElementById("brady").getContext( '2d' );
+var pans = [ -0.9, 0.9, -0.6, -0.2, 0.2, 0.6 , -0.8, -0.4, 0.4, 0.8,0];
 var mcu;
 
 function Session(id,lpan) {
@@ -234,16 +194,10 @@ function Session(id,lpan) {
     this.statusChannel = null;
     this.audio = null;
     this.audioLevel =0.0;
-    this.place = {x:0,y:0,w:0,h:0};
     //this.img = null;
     //this.imageData = null;
     if (!lpan) {
         this.pan = pans.pop();
-        this.place = places.pop();
-        if (!this.place){
-            console.log("too many users for video...");
-            this.place = {x:0,y:0,w:0,h:0};
-        }
         if (!this.pan){
             console.log("pan audio to center ...");
             this.pan = 0.0;
@@ -258,23 +212,21 @@ function Session(id,lpan) {
     console.log("pan is " + this.pan);
     this.rdiv = document.createElement("div");
     var remoteslot = document.getElementById(""+this.pan);
-    var canvas = document.getElementById("brady");
-    var height = canvas.clientHeight/2;
-    var width = Math.min(canvas.clientWidth /10,height*0.75);
 
     if (initiator) {
         // add an video tag per recipient because chrome needs some suckage on the pipe...
         this.audio = document.createElement("video");
-        //this.audio.setAttribute("style","display: none;");
         this.audio.muted = true;
         this.audio.setAttribute("autoplay","true");
-        this.audio.setAttribute("width",this.place.width);
-        this.audio.setAttribute("height",this.place.height);
-        console.log("Set video width x height to "+width+" x "+height);
         this.rdiv.appendChild(this.audio);
-        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;")
+        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;");
+        var remotes = document.getElementById("remotes");
+        CropTarget.fromElement(remotes).then((t) => {
+            cropVideo = t;
+            console.log("got crop Target");
+        });
+
     }
-    //Robohash.render(this.fid,this.rdiv);
     remoteslot.appendChild(this.rdiv);
 };
 
@@ -349,7 +301,6 @@ Session.prototype.stopSession = function() {
         }
         this.panned = null;
         pans.push(this.pan);
-        places.push(this.place);
     }
     try {
         if (this.dcomp != null) {
@@ -399,9 +350,6 @@ Session.prototype.stopSession = function() {
             console.log("dom tidy up failed");
         }
     }
-    var cw = canv2d.canvas.width;
-    var ch = canv2d.canvas.height;
-    canv2d.clearRect(0,0, cw, ch);
 
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
@@ -535,7 +483,6 @@ Session.prototype.tellAll = function() {
             console.log("skip me " + id);
         }
     });
-    that.statusChannel.send(JSON.stringify({act: 'selfview', place: that.place,ch:700,cw:1200}));
 };
     Session.prototype.addStream = function(stream,kind) {
         if (!kind) {
@@ -608,12 +555,6 @@ Session.prototype.tellAll = function() {
                             console.log("added mcu outbound track ", track.id, track.kind, track.label);
                         });
                     }
-                    if (bookStream){
-                        bookStream.getTracks().forEach(track => {
-                            pc.addTrack(track, bookStream);
-                            console.log("added book outbound track ", track.id, track.kind, track.label);
-                        });
-                    }
                 } else {
                     pc.addStream(pstream);
                     console.log("added panned outbound stream");
@@ -649,11 +590,6 @@ Session.prototype.tellAll = function() {
                     console.log("added remote " + kind + " stream to videotag");
                     them.srcObject = stream;
                     $("#them").show();
-                } else {
-                    var book = document.getElementById("bookVideo");
-                    console.log("added remote " + kind + " stream to book");
-                    book.srcObject = stream;
-                    $("#bookVideo").show();
                 }
             }
         }
@@ -669,19 +605,6 @@ Session.prototype.tellAll = function() {
             this.audio.play();
             console.log("added stream to local media object");
         }
-        //var settings = getSize(stream);
-        var that = this;
-
-        var drawToCanvas = function () {
-            var vh = that.audio.videoHeight;
-            var vw = that.audio.videoWidth;
-            canv2d.drawImage(that.audio, 0, 0,vw,vh, that.place.x, that.place.y,that.place.w,that.place.h);
-            //repeat this every time a new frame becomes available using
-            //the browser's build-in requestAnimationFrame method
-            requestAnimationFrame(drawToCanvas);
-        }
-        //console.log("drawing video at " + x);
-        drawToCanvas();
     };
 
 Session.prototype.sendNewTrack = function(videoTrack){
@@ -900,30 +823,6 @@ function candyProt(candy){
                     sess.stopSession();
                 }
             }
-            if (mo.act =="selfview") {
-                console.log("paint me");
-              /*  var me = document.getElementById("me");
-                me.srcObject = localStream;
-                var them = document.getElementById("them");
-                var resizeMe = () => {
-                    var sx = them.clientWidth/mo.cw;
-                    var sy = them.clientHeight/mo.ch;
-                    var rect = them.getBoundingClientRect();
-                    var mx = Math.floor(mo.place.x * sx);
-                    var my = Math.floor(mo.place.y * sy);
-                    sx *=-1.0;
-                    my -= rect.height;
-                    var mw = Math.floor(mo.place.w * sx);
-                    var mh = Math.floor(mo.place.h * sy);
-                    console.log("resize me");
-                    //
-                    me.setAttribute("style","position:relative; transform:  scale("+sx+","+sy+"); top:"+my+"px; left:"+mx+"px;");
-                }
-                new ResizeObserver(resizeMe).observe(them);
-                //them.onresize = resizeMe;
-                //me.onresize = resizeMe;
-*/
-            }
         } else {
             console.log("missing action");
         }
@@ -947,21 +846,22 @@ function candyProt(candy){
             audioTracks[0].enabled = !m;
         }
     }
-/*
-    function repaintDuration(){
-        var diff = Date.now() - startRecTime;
-        console.log ("data on at "+diff);
-        var mins = Math.floor(diff / 60000);
-        var secs = Math.floor((diff % 60000) / 1000);
-        $("#duration").text(""+mins+":"+secs);
-    }
-*/
 
-function captureCanvas(){
-    var can = document.getElementById("brady");
-    mcu = can.captureStream(30);
-    console.log("captured canvas stream");
+async function captureRegion() {
+    // set mcu  somehow.
+    mcu = await navigator.mediaDevices.getDisplayMedia({
+        audio: false,
+        video: true,
+        preferCurrentTab: true
+    });
+    var mcuT = mcu.getVideoTracks()[0];
+    if ((cropVideo) && (mcuT.cropTo)) {
+        await mcuT.cropTo(cropVideo);
+    } else {
+        console.log("No cropTarget or cropTo")
+    }
 }
+
 
     // plumb the local audio together.
 function setupAudio() {
@@ -1004,11 +904,8 @@ function setupAudio() {
                     localsrc.connect(localpanned);
                     // do something with video here - plunk it on our robot....
                     sessions[mid].addVstream(stream);
-                    $("#brady").show();
-                    $("#recordCall").show();
-
                     $("#them").muted = true;
-                    captureCanvas();
+                    captureRegion();
                 } else {
                     var pc = sessions[cid].pc; // implicit detection of us being a guest
                     if (pc.addTrack) {
@@ -1023,7 +920,6 @@ function setupAudio() {
                         pc.addStream(stream);
                         console.log("added local stream");
                     }
-                    var bookshare = pc.addTransceiver("video", {direction:"recvonly"});
                 }
                 resolve(false);
             })
@@ -1068,82 +964,11 @@ function setupAudio() {
             startCall(cid)
         });
     }
-    function repaintDuration(){
-        var diff = Date.now() - startRecTime;
-        console.log ("data on at "+diff);
-        var mins = Math.floor(diff / 60000);
-        var secs = Math.floor((diff % 60000) / 1000);
-        $("#recordCall").text(""+mins+":"+secs);
-    }
-
-    function recordCall() {
-        if (!recorder) {
-            startRecTime = Date.now();
-            var recStream = myac.createMediaStreamDestination();
-            recorder = new MediaRecorder(recStream.stream);
-            localpanned.connect(recStream);
-            localdcomp.connect(recStream);
-            recorder.ondataavailable = function (evt) {
-                chunks.push(evt.data);
-                repaintDuration();
-            };
-            recorder.onstop = function (evt) {
-                // Make blob out of our blobs, and open it.
-                var blob = new Blob(chunks, {'type': 'audio/ogg; codecs=opus'});
-                saveData(blob)
-            };
-            recorder.start(10000);
-            repaintDuration();
-            saved = false;
-            window.onbeforeunload = function() {
-                return !saved ? "If you leave this page you will lose the recording." : null;
-            }
-        } else {
-            recorder.stop();
-            recorder = null;
-        }
-    }
-    function saveData(blob) {
-        var fileName = 'Rendezvous-zone-'+new Date().toISOString() + '.webm';
-
-        console.log("Save data ?");
-        var a = document.createElement("a");
-        document.body.appendChild(a);
-        a.style = "display: none";
-        console.log("saving wav blob as " + fileName);
-        var burl = window.URL.createObjectURL(blob);
-        a.href = burl;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(burl);
-        saved = true;
-        $("#status").text("Call saved as "+fileName);
-    }
 
 
-    function noShareApp() {
-        $('#share').modal('show');
-    }
-    async function shareMyApp() {
-        try {
-            var displayMediaOptions ={
-                video: {
-                    cursor: "always"
-                },
-                audio: false
-            };
-            bookStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-            var bv = document.getElementById("bookVideo");
-            bv.srcObject = bookStream;
-            $("#bookVideo").show();
-        } catch(err) {
-            console.error("Error: " + err);
-        }
-        noShareApp();
-    }
 
     function loadProps() {
-        var that = {configUrl: "https://dev.pi.pe/pipeconfig.json"};
+        var that = {configUrl: "pipeconfig.json"};
         var promise = new Promise(function (resolve, reject) {
             var xobj = new XMLHttpRequest();
             xobj.overrideMimeType("application/json");
@@ -1217,7 +1042,7 @@ function setupAudio() {
                 } else {
                     $("#role").text(initiator ? "Host" : "Guest");
                     $("#status").text("Waiting for connection");
-                    smodal = initiator ? "#shareScreen" : "#accept";
+                    smodal = initiator ? "#share" : "#accept";
                 }
                 $(smodal).modal('show');
                 //Robohash.render(mid, document.getElementById("me"));
@@ -1304,39 +1129,8 @@ function clearCodecOrder(pc,track){
             console.log("video stream is " + settings.width + " x " + settings.height);
         }
         return settings;
-        //var video = document.getElementById("them");;
     }
-/*
-function _addSourceToVideo(element, type, dataURI) {
-    var source = document.createElement('source');
-    source.src = dataURI;
-    source.type = 'video/' + type;
-    element.appendChild(source);
-}
-/* find the original at https://github.com/richtr/NoSleep.js/ */
-/* brutally butchered version of the above keeps the phone from sleeping becuase it sees a video playing...*/
-/*
-    function setNoSleep() {
-        var videoEl = document.getElementById("nosleep");
-        _addSourceToVideo(videoEl, 'webm', 'data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQI0VSalmQCgq17FAAw9CQE2AQAZ3aGFtbXlXQUAGd2hhbW15RIlACECPQAAAAAAAFlSua0AxrkAu14EBY8WBAZyBACK1nEADdW5khkAFVl9WUDglhohAA1ZQOIOBAeBABrCBCLqBCB9DtnVAIueBAKNAHIEAAIAwAQCdASoIAAgAAUAmJaQAA3AA/vz0AAA=');
-        _addSourceToVideo(videoEl, 'mp4', 'data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAACKBtZGF0AAAC8wYF///v3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0MiByMjQ3OSBkZDc5YTYxIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTEgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MToweDExMSBtZT1oZXggc3VibWU9MiBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0wIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MCA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0wIHRocmVhZHM9NiBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTMgYl9weXJhbWlkPTIgYl9hZGFwdD0xIGJfYmlhcz0wIGRpcmVjdD0xIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MSBrZXlpbnQ9MzAwIGtleWludF9taW49MzAgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD0xMCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIwLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IHZidl9tYXhyYXRlPTIwMDAwIHZidl9idWZzaXplPTI1MDAwIGNyZl9tYXg9MC4wIG5hbF9ocmQ9bm9uZSBmaWxsZXI9MCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAOWWIhAA3//p+C7v8tDDSTjf97w55i3SbRPO4ZY+hkjD5hbkAkL3zpJ6h/LR1CAABzgB1kqqzUorlhQAAAAxBmiQYhn/+qZYADLgAAAAJQZ5CQhX/AAj5IQAD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');
-        videoEl.addEventListener('loadedmetadata', function () {
-            console.log("loaded metadata");
-            if (videoEl.duration <= 1) {
-                // webm source
-                videoEl.setAttribute('loop', '');
-            } else {
-                // mp4 source
-                videoEl.addEventListener('timeupdate', function () {
-                    if (videoEl.currentTime > 0.5) {
-                        videoEl.currentTime = Math.random();
-                    }
-                });
-            }
-        });
-        videoEl.play();
-    }
-*/
+
 
     // some housekeeping
 
@@ -1362,18 +1156,10 @@ function _addSourceToVideo(element, type, dataURI) {
         $("#packetLoss").hide();
         $("#statsZone").hide();
         $("#them").hide();
-        $("#brady").hide();
-        $("#vids").hide();
-        $("#bookVideo").hide();
-        $("#recordCall").hide();
-
-
+        $("#vids").show();
 
         document.getElementById("callAccept").onclick = accepted;
-        document.getElementById("shareMyApp").onclick = shareMyApp;
-        document.getElementById("noShareApp").onclick = noShareApp;
         document.getElementById("shareDone").onclick = shared;
-        document.getElementById("recordCall").onclick = recordCall;
 
         //document.getElementById("me").onclick = toggleplay;
 
