@@ -925,7 +925,13 @@ function setupAudio() {
             })
             .catch((e) => {
                 console.log('getUserMedia() error:' + e);
-                reject(e);
+
+                if (initiator){
+                    captureRegion(); // do this anyway
+                    resolve(false);
+                } else {
+                    reject(e);
+                }
             });
     });
     return promise;
