@@ -44,7 +44,24 @@
 
 <div class="card container-fluid all" style="background: transparent;">
     <div id="remotes" class="card-header" >
+        <div id="r1" class="row no-gutters" >
+            <div class="col" id="-0.9"></div>
+            <div class="col" id="-0.6"></div>
+            <div class="col" id="-0.2"></div>
+            <div class="col" id="0.2"></div>
+            <div class="col" id="0.6"></div>
+            <div class="col" id="0.9"></div>
+        </div>
+        <div id="r2" class="row no-gutters" >
+            <div class="col" id="-0.8"></div>
+            <div class="col" id="-0.4"></div>
+            <div class="col" id="0"></div>
+            <div class="col" id="0.4"></div>
+            <div class="col" id="0.8"></div>
+        </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline ></video>
+        <video id="me" playsinline autoplay muted ></video>
+        <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
 
@@ -147,20 +164,83 @@
 var socket; // used to set up connection with our peers.
 var mid;
 var cid;
-
+var myac;
+var initiator;
+var localStream;
+var localdcomp;
+var localpanned;
 var mute = false;
 var peerConnectionOfferAnswerCriteria =  {offerToReceiveAudio: true, offerToReceiveVideo: true };
+var AudioContext = window.AudioContext || window.webkitAudioContext;
+var sessions = {};
+var isChrome = ("chrome" in window);
 var properties = {};
 var cropVideo = null;
 const mungeing = false;
-var sessions = {};
-var localStream;
 
 
-function Session() {
-    this.pc = null;
-    this.lcandyStash = [];
-}
+var pans = [ -0.9, 0.9, -0.6, -0.2, 0.2, 0.6 , -0.8, -0.4, 0.4, 0.8,0];
+var mcu;
+
+function Session(id,lpan) {
+    this.checker = null;
+    this.lastLoss = 0;
+    this.lastRecv =0;
+    this.fid = id;
+    this.panned = null;
+    this.dcomp = null;
+    this.peerout = null;
+    this.peerin = null;
+    this.statusChannel = null;
+    this.audio = null;
+    this.audioLevel =0.0;
+    //this.img = null;
+    //this.imageData = null;
+    if (!lpan) {
+        this.pan = pans.pop();
+        if (!this.pan){
+            console.log("pan audio to center ...");
+            this.pan = 0.0;
+        }
+        console.log("created peer connection for " + id);
+        this.lcandyStash = [];
+    } else {
+        this.pc = null;
+        this.pan = lpan;
+        console.log("dummy entry for " + id );
+    }
+    console.log("pan is " + this.pan);
+    this.rdiv = document.createElement("div");
+    var remoteslot = document.getElementById(""+this.pan);
+
+    if (initiator) {
+        // add an video tag per recipient because chrome needs some suckage on the pipe...
+        this.audio = document.createElement("video");
+        this.audio.muted = true;
+        this.audio.setAttribute("autoplay","true");
+        this.rdiv.appendChild(this.audio);
+        this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;");
+        var remotes = document.getElementById("remotes");
+        CropTarget.fromElement(remotes).then((t) => {
+            cropVideo = t;
+            console.log("got crop Target");
+        });
+
+    }
+    remoteslot.appendChild(this.rdiv);
+};
+
+Session.prototype.offerDeal = function (data) {
+    this.setupRTC();
+    this.pc.setRemoteDescription(data).then(_ =>
+        this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
+            //ans.sdp = tweakSDP(ans.sdp);
+            this.pc.setLocalDescription(ans).then(_ =>
+                sendMessage(this.fid, mid, "answer", ans.sdp)
+            )
+        })
+    ).catch((e) => console.log("set Remote offer error", e));
+};
 Session.prototype.answerDeal = function(data){
     this.pc.setRemoteDescription(data)
         .then( _ => {
@@ -184,7 +264,60 @@ Session.prototype.stopSession = function() {
     delete sessions[this.fid];
 
     var that = this;
-
+    if (initiator) {
+        Object.entries(sessions).forEach(sessionkva => {
+            var session = sessionkva[1];
+            if (that.dcomp && session.panned) {
+                try {
+                    session.panned.disconnect(that.dcomp);
+                } catch (e) {
+                    console.log("session not connected to dcomp...")
+                }
+            }
+            if (that.panned && session.dcomp) {
+                try {
+                    that.panned.disconnect(session.dcomp);
+                } catch (e) {
+                    console.log("panned not connected to dcomp...")
+                }
+            }
+            if (session.statusChannel && (session.statusChannel.readyState == 'open')) {
+                session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
+            }
+        });
+    }
+    if (localpanned){
+        try {
+            localpanned.disconnect(this.dcomp);
+        } catch (e) {
+            console.log("local not connected to dcomp...")
+        }
+    }
+    if (this.panned != null) {
+        try {
+            this.panned.disconnect(localdcomp);
+        } catch (e) {
+            console.log("panned not connected to localdcomp...")
+        }
+        this.panned = null;
+        pans.push(this.pan);
+    }
+    try {
+        if (this.dcomp != null) {
+            this.dcomp.disconnect();
+            this.dcomp = null;
+        }
+        if (this.peerout != null) {
+            this.peerout.disconnect();
+            this.peerout = null;
+        }
+        if (this.peerin != null) {
+            this.peerin.disconnect();
+            this.peerin = null;
+        }
+    } catch (e) {
+        console.log("mixup in disconnects")
+    }
     if (this.checker != null) {
         window.clearTimeout(this.checker);
         this.checker = null;
@@ -193,12 +326,32 @@ Session.prototype.stopSession = function() {
     if(this.pc != null){
         var mpc = this.pc;
         window.setTimeout(function () {
-
-            stopCall(); // that is if we killed the (only) pc then byebye
-
+            if (initiator) {
+                mpc.close();
+            } else {
+                stopCall(); // that is if we killed the (only) pc then byebye
+            }
         },5000);
         this.pc = null;
     }
+    if (this.rdiv) {
+        this.audio.srcObject = null;
+        this.audio.pause();
+        try {
+            var rd = this.audio.parentNode;
+            if (rd) {
+                rd.removeChild(this.audio);
+            }
+            var remotes = this.rdiv.parentNode;
+            if (remotes) {
+                remotes.removeChild(this.rdiv);
+            }
+        }catch (e) {
+            console.log("dom tidy up failed");
+        }
+    }
+
+    $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
     console.log("setting up webRTC for "+this.fid);
@@ -253,12 +406,22 @@ Session.prototype.setupRTC = function(){
                 },5000);
             }
         };
-
+        // specification of WEBRTC is in flux - so we test to see if ontrack callback exists
+        if ('ontrack' in this.pc) {
+            // if so we use it
             this.pc.ontrack = (event) => {
                 var stream = event.streams[0];
                 console.log("got remote track ", event.track.kind);
                 this.addStream(stream,event.track.kind);
             };
+        } else {
+            // if not we use add stream instead
+            this.pc.onaddstream = (event) => {
+                var stream = event.stream;
+                console.log("got remote stream ", stream.kind);
+                this.addStream(stream);
+            }
+        }
 
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
         this.pc.onsignalingstatechange = (evt) => {
@@ -278,24 +441,171 @@ Session.prototype.setupRTC = function(){
                 }
             }
         };
+        this.pc.ondatachannel = (evt) => {
+            console.log("got new datachannel from " +this.fid);
+            this.statusChannel = evt.channel;
+            console.log("got new datachannel from " +this.statusChannel.label);
+
+            this.statusChannel.onopen = (ev) => {
+                console.log("got open datachannel from " +this.fid);
+                that.tellAll();
+                // don't tell them about us.
+                // that.statusChannel.send(JSON.stringify({act: 'add', fid: cid, pan: "0"}));
+            };
+            var that = this;
+            this.statusChannel.onmessage = (ev) => {
+                console.log("got data on datachannel from " +that.fid);
+                /*var mess = JSON.parse(ev.data);
+                if (mess.id == that.fid){
+                    console.log("setting image data");
+                    that.setImage(mess.img);
+                } */
+            }
+            this.statusChannel.onclose = (ev) => {
+                console.log("lost datachannel from " +that.fid);
+                this.stopSession();
+            }
+        };
 };
-Session.prototype.addStream = function(stream,kind) {
-    if (!kind) {
-        kind = "audio/video";
-    }
-    console.log("got new stream" + stream + " kind =" + kind);
-    if (kind.indexOf("audio") != -1) {
-        var that = this;
-        $("#chosenAction").show();
-    }
-    var them = document.getElementById("them");
-
-    console.log("added remote " + kind + " stream to videotag");
-    them.srcObject = stream;
-    $("#them").show();
-
+Session.prototype.tellAll = function() {
+    var that = this;
+    Object.entries(sessions).forEach(sessionkva => {
+        var id = sessionkva[0];
+        var session = sessionkva[1];
+        // tell them about everyone (including themselves)
+        that.statusChannel.send(JSON.stringify({act: 'add', fid: session.fid, pan: session.pan}));
+        if (id != this.fid) {
+            // tell everyone (except them) about them
+            if ((session.statusChannel) && (session.statusChannel.readyState=='open')) {
+                session.statusChannel.send(JSON.stringify({act: 'add', fid: that.fid, pan: that.pan})); // I hear them
+            }
+        } else {
+            console.log("skip me " + id);
+        }
+    });
 };
+    Session.prototype.addStream = function(stream,kind) {
+        if (!kind) {
+            kind = "audio/video";
+        }
+        $("#status").text("Call connected to " + Object.keys(sessions).length + " member(s).");
+        console.log("got new stream" + stream + " kind =" + kind);
+        if (kind.indexOf("audio") != -1) {
+            if (initiator) {
+                // inbound....
+                this.peerin = myac.createMediaStreamSource(stream);
+                this.panned = myac.createStereoPanner();
+                this.panned.pan.value = this.pan;
+                console.log("panned to " + this.pan);
+                this.peerin.connect(this.panned);
 
+                // now connect panned to :
+                // local destination...
+
+                // plug the panned output into our dcomp so we get the stereo effect as host.
+                if (localdcomp != null) {
+                    this.panned.connect(localdcomp);
+                } else {
+                    console.log("nowhere to plug " + this.fid);
+                }
+
+                var that = this;
+
+                // outbound
+                // for now just add the localpanned stream
+
+                this.dcomp = myac.createDynamicsCompressor();
+                if (localpanned) {
+                    localpanned.connect(this.dcomp);
+                    console.log("connect local stream to dcomp");
+                }
+
+                Object.entries(sessions).forEach(sessionkva => {
+                    var id = sessionkva[0];
+                    if (id != this.fid) {
+                        var session = sessionkva[1];
+                        if (that.panned && session.dcomp) {
+                            that.panned.connect(session.dcomp); // they hear me
+                        }
+                        if (that.dcomp && session.panned) {
+                            session.panned.connect(that.dcomp); // I hear them
+                        }
+                    } else {
+                        console.log("skip me " + id);
+                    }
+
+                });
+
+
+                this.peerout = myac.createMediaStreamDestination();
+                this.dcomp.connect(this.peerout);
+                var pc = this.pc;
+                var pstream = this.peerout.stream;
+                if (pc.addTrack) {
+                    pstream.getTracks().forEach(track => {
+                        pc.addTrack(track, pstream);
+                        console.log("added panned outbound track ", track.id, track.kind, track.label);
+                    });
+                    if (mcu) {
+                        mcu.getTracks().forEach(track => {
+                            pc.addTrack(track, mcu);
+                            if (track.kind === "video") {
+                                setCodecOrder(pc, track);
+                            }
+                            console.log("added mcu outbound track ", track.id, track.kind, track.label);
+                        });
+                    }
+                } else {
+                    pc.addStream(pstream);
+                    console.log("added panned outbound stream");
+                    if (mcu) {
+                        pc.addStream(mcu);
+                        console.log("added mcu outbound stream");
+                    }
+                }
+            }
+            var that = this;
+            this.checker = window.setInterval(function () {
+                that.checkLoss();
+            }, 1000);
+
+
+            // audio together here.
+            // depends on role
+            console.log('Audio sample Rate is ' + myac.sampleRate);
+            $("#chosenAction").show();
+            $("#statsZone").show();
+        }
+        if (initiator) {
+            this.addVstream(stream, kind);
+        } else {
+            if (kind.indexOf("audio") != -1) {
+                console.log("added remote "+kind+" stream to audio");
+                var au = document.getElementById("audio");
+                au.srcObject = stream;
+                au.play();
+            } else {
+                var them = document.getElementById("them");
+                if (them.srcObject == null) {
+                    console.log("added remote " + kind + " stream to videotag");
+                    them.srcObject = stream;
+                    $("#them").show();
+                }
+            }
+        }
+
+    };
+
+    Session.prototype.addVstream = function(stream) {
+
+        // note that these only exist because chrome is weird and needs an audio tag
+        // which can (and should) be muted - so this makes no sound. - also video now
+        if (isChrome) {
+            this.audio.srcObject = stream;
+            this.audio.play();
+            console.log("added stream to local media object");
+        }
+    };
 
 Session.prototype.sendNewTrack = function(videoTrack){
     sessions.forEach((id,session) => {
@@ -313,8 +623,58 @@ Session.prototype.sendNewTrack = function(videoTrack){
         }
     });
 }
+Session.prototype.checkLoss = function(){
+    var that = this;
+    if (this.pc) {
+        this.pc.getReceivers()[0].getStats().then(
+            function (rs) {
+                var style = "";
+                rs.forEach(function (d) {
+                    if (d.type === "inbound-rtp") {
+                        var recvd = d.packetsReceived;
+                        var lost = d.packetsLost;
+                        var colour = "grey";
+                        if (lost > that.lastLoss) {
+                            var diffl = lost - that.lastLoss;
+                            var diffp = recvd - that.lastRecv;
+                            var pct = Math.ceil(100.0 * diffl / diffp);
+                            if (pct > 0) {
+                                colour = rgb(128 + pct, 128, 128);
+                            }
+                        }
+                        that.lastLoss = lost;
+                        that.lastRecv = recvd;
+                        style += "background-color:" + colour + "; ";
 
+                    }
+                    if (d.type === "track") {
+                        that.audioLevel = d.audioLevel;
+                        var bwidth = Math.floor((that.audioLevel * 10.0));
+                        if (bwidth >= 2){
+                            style += " border-style:outset; ";
+                        } else {
+                            style += " border-style:hidden; ";
+                        }
+                        //console.log("bwidth ="+bwidth);
+                    }
+                    /*if ((d.type ==="candidate-pair")&&(d.nominated)){
+                        $("#delay").text(""+d.currentRoundTripTime);
+                    }
+                    if (d.type === "remote-candidate"){
+                        $("#remote").text(d.candidateType);
+                    }
+                    if (d.type === "local-candidate"){
+                        $("#local").text(d.candidateType);
+                    }*/
+                }
 
+                );
+                //that.rdiv.setAttribute("style", style);
+                //console.log("style ="+style);
+
+            });
+    }
+}
 
 
 function rgb
@@ -350,10 +710,18 @@ function messageDeal(event){
     var session = sessions[data.from];
     switch (data.type) {
         case "offer":
-            console.log("huh? Guests send offers");
+            if ((session == null) && (initiator)) {
+                session = new Session(data.from);
+                sessions[data.from] = session;
+            }
+            if (initiator){
+                session.offerDeal(data);
+            } else {
+                console.log("huh? Guests send offers");
+            }
             break;
         case "answer":
-            if (session){
+            if ((session) && (!initiator)){
                 session.answerDeal(data);
             }
             break;
@@ -497,32 +865,77 @@ async function captureRegion() {
 
     // plumb the local audio together.
 function setupAudio() {
+
+    myac = new AudioContext();
+
+    //setNoSleep();
     var idealConstraints = {audio: true, video: {
-            width: {  ideal: 240 },
-            height: { ideal: 320 },
-            frameRate: {ideal: 15},
-        }};
+        width: {  ideal: 240 },
+        height: { ideal: 320 },
+        frameRate: {ideal: 30},
+        //aspectRatio: { ideal: 1.7777777778 }
+    }};
+
+   var gumConstraints = {audio: {} ,video: {} };
+
+    // connect to our speakers
+    if (initiator){
+        // this works beautifully on firefox but fails in chrome
+        // unless we make a _lot_ of <audio> tags
+        localdcomp = myac.createDynamicsCompressor();
+        var dests = myac.createMediaStreamDestination();
+        localdcomp.connect(dests);
+        // set up play....
+        //console.log("local dcomp connected ");
+        document.getElementById("them").srcObject = dests.stream;
+        document.getElementById("them").play();
+    }
 
     var promise = new Promise(function (resolve, reject) {
         navigator.mediaDevices.getUserMedia(idealConstraints)
             .then((stream) => {
                 localStream = stream;
-                var pc = sessions[cid].pc; // implicit detection of us being a guest
-                stream.getTracks().forEach(track => {
-                    pc.addTrack(track, stream);
-                    console.log("added local track ", track.id, track.kind);
-                    /*if (track.kind === "video") {
-                        setCodecOrder(pc, track);
-                    }*/
-                });
+                // do magic pan stuff here....
+                if (initiator) {
+                    var localsrc = myac.createMediaStreamSource(stream);
+                    localpanned = myac.createStereoPanner();
+                    localpanned.pan.value = 0.0;
+                    console.log("local stream panned to 0.0 ");
+                    localsrc.connect(localpanned);
+                    // do something with video here - plunk it on our robot....
+                    sessions[mid].addVstream(stream);
+                    $("#them").muted = true;
+                    captureRegion();
+                } else {
+                    var pc = sessions[cid].pc; // implicit detection of us being a guest
+                    if (pc.addTrack) {
+                        stream.getTracks().forEach(track => {
+                            pc.addTrack(track, stream);
+                            console.log("added local track ", track.id, track.kind);
+                            /*if (track.kind === "video") {
+                                setCodecOrder(pc, track);
+                            }*/
+                        });
+                    } else {
+                        pc.addStream(stream);
+                        console.log("added local stream");
+                    }
+                }
                 resolve(false);
             })
             .catch((e) => {
                 console.log('getUserMedia() error:' + e);
-                reject(e);
+
+                if (initiator){
+                    captureRegion(); // do this anyway
+                    resolve(false);
+                } else {
+                    reject(e);
+                }
             });
     });
     return promise;
+
 }
 
     function setupRTC() {
@@ -586,50 +999,72 @@ function setupAudio() {
         return promise;
     }
 
+// decide who we are initiator or recpient.
+// notice that the actual call goes in the reverse direction
+// the recipient of the invite actually creates the audiobearing peerconnection
+// the initiator then accepts this audio - This allows the initiator the chance to
+// change their mind, if their circumstances have changed since the invite was sent.
 
 
-async function setRole() {
-    cid = $.getUrlVar("clubId");
-    mid = localStorage['clubId'];
-    if (!mid) {
-        var array = new Uint32Array(8);
-        window.crypto.getRandomValues(array);
-        var hexCodes = [];
-        for (var i = 0; i < array.length; i ++ ){
-            // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
-            var value = array[i];
-            // toString(16) will give the hex representation of the number without padding
-            var stringValue = value.toString(16);
-            // We use concatenation and slice for padding
-            var padding = '00000000';
-            var paddedValue = (padding + stringValue).slice(-padding.length)
-            hexCodes.push(paddedValue);
+    async function setRole() {
+        cid = $.getUrlVar("clubId");
+        mid = localStorage['clubId'];
+        //var act = $("#action");
+        if (!mid) {
+            var array = new Uint32Array(8);
+            window.crypto.getRandomValues(array);
+            var hexCodes = [];
+            for (var i = 0; i < array.length; i ++ ){
+                // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
+                var value = array[i];
+                // toString(16) will give the hex representation of the number without padding
+                var stringValue = value.toString(16);
+                // We use concatenation and slice for padding
+                var padding = '00000000';
+                var paddedValue = (padding + stringValue).slice(-padding.length)
+                hexCodes.push(paddedValue);
+            }
+            mid = hexCodes.join("").toLowerCase();
+            console.log("mid =", mid);
+            localStorage['clubId'] = mid;
         }
-        mid = hexCodes.join("").toLowerCase();
-        console.log("mid =", mid);
-        localStorage['clubId'] = mid;
+        if (cid == null){
+            document.location = location.pathname + "?" + "clubId=" + mid ;
+            // this has the effect of getting our id into the browser bar -
+            // making it easy to share etc.
+        } else {
+            properties = await loadProps();
+            socket = new WebSocket( properties.wsurl + mid);
+            socket.onmessage = messageDeal;
+            socket.onopen = (_) => {
+                var url = document.location.href;
+                console.log("href = "+url);
+
+                initiator = (mid === cid);
+
+                var smodal;
+                if (initiator && !("StereoPannerNode" in window)) {
+                    smodal ="#nomediaapi";
+                } else {
+                    $("#role").text(initiator ? "Host" : "Guest");
+                    $("#status").text("Waiting for connection");
+                    smodal = initiator ? "#share" : "#accept";
+                }
+                $(smodal).modal('show');
+                //Robohash.render(mid, document.getElementById("me"));
+            };
+            socket.onerror = (e) => {
+                console.log("can't open websocket", e);
+                $("#status").text("Internet problems ?");
+
+            };
+            socket.onclose = (e) => {
+                console.log(" websocket closed", e);
+                $("#status").text("Server problems ?");
+
+            };
+        }
     }
-    properties = await loadProps();
-    socket = new WebSocket( properties.wsurl + mid);
-    socket.onmessage = messageDeal;
-    socket.onopen = (_) => {
-        var url = document.location.href;
-        console.log("href = "+url);
-        $("#role").text("Guest");
-        $("#status").text("Waiting for connection");
-        $("#accept").modal('show');
-    };
-    socket.onerror = (e) => {
-        console.log("can't open websocket", e);
-        $("#status").text("Internet problems ?");
-
-    };
-    socket.onclose = (e) => {
-        console.log(" websocket closed", e);
-        $("#status").text("Server problems ?");
-    };
-
-}
 
 function codecPriority(codecMime){
     var ret = 2;
@@ -727,9 +1162,12 @@ function clearCodecOrder(pc,track){
         $("#packetLoss").hide();
         $("#statsZone").hide();
         $("#them").hide();
+        $("#vids").show();
 
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
+
+        //document.getElementById("me").onclick = toggleplay;
 
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
