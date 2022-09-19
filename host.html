@@ -496,16 +496,15 @@ Session.prototype.tellAll = function() {
             // depends on role
             console.log('Audio sample Rate is ' + myac.sampleRate);
             $("#statsZone").show();
+        } else {
+            this.addVstream(stream);
         }
-        this.addVstream(stream);
     };
 
     Session.prototype.addVstream = function(stream) {
         // note that this is mostly for video, but we also add (muted) audio because chrome is dumb
-        if (isChrome) {
-            this.audio.srcObject = stream;
-            console.log("added stream a local media object");
-        }
+        this.audio.srcObject = stream;
+        console.log("added stream a local media object");
     };
 
 Session.prototype.sendNewTrack = function(videoTrack){

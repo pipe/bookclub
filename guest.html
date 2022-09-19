@@ -270,9 +270,7 @@ Session.prototype.setupRTC = function(){
         };
 
             this.pc.ontrack = (event) => {
-                var stream = event.streams[0];
-                console.log("got remote track ", event.track.kind);
-                this.addStream(stream,event.track.kind);
+                this.addTrack(event.track);
             };
 
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
@@ -294,19 +292,28 @@ Session.prototype.setupRTC = function(){
             }
         };
 };
-Session.prototype.addStream = function(stream,kind) {
-    if (!kind) {
-        kind = "audio/video";
+Session.prototype.addTrack = function(track) {
+    console.log("got new track" + track.id + " kind =" + track.kind);
+
+    var them = document.getElementById("them");
+    console.log("adding remote " + track.kind + " to videotag");
+
+    if (!them.srcObject){
+        var s = new MediaStream();
+        s.addTrack(track);
+        them.srcObject = s;
+        console.log("added to track new stream");
+    } else {
+        them.srcObject.addTrack(track);
+        console.log("added to track existing stream");
     }
-    console.log("got new stream" + stream + " kind =" + kind);
-    if (kind.indexOf("audio") != -1) {
+
+    if (track.kind.indexOf("audio") != -1) {
         $("#chosenAction").show();
     }
-    var them = document.getElementById("them");
-
-    console.log("added remote " + kind + " stream to videotag");
-    them.srcObject = stream;
-    $("#them").show();
+    if (track.kind.indexOf("video") != -1) {
+        $("#them").show();
+    }
 
 };
 
