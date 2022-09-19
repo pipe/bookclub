@@ -51,12 +51,10 @@
     <div class="card-body">
 
         <div id="chosenAction" class="row justify-content-around">
-            <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
-            <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
-        </div>
-        <div class="card-img-bottom row">
-            <div class="col"><img style="width:inherit;" src="front.PNG" ></img> </div>
-            <div class="col"><img style="width:inherit;" src="back.jpg"></img></div>
+            <button id="play" type="button" class="col-2 btn btn-primary btn-lg"><i id="playIcon" class="fa fa-play fa-2x" aria-hidden="true"></i></button>
+            <button id="mute" type="button" class="col-2 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
+            <button id="stopCall" type="button" class="col-2 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
+            <button id="settings" type="button" class="col-2 btn btn-primary btn-lg"><i id="settingsIcon" class="fa fa-gear fa-2x" aria-hidden="true"></i></button>
         </div>
     </div>
     <div class="card-footer">
@@ -139,7 +137,29 @@
     </div>
 </div>
 
-
+<div id="audiosettings" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Audio Settings</h5>
+            </div>
+            <div class="modal-body">
+                <p>Audio Inputs
+                <ul id="ain"></ul>
+                </p>
+                <p>Audio Outputs
+                <ul id="aout"></ul>
+                </p>
+                <p>Video Inputs
+                <ul id="vin"></ul>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button id="adone" type="button" class="btn btn-secondary" data-dismiss="modal" >Done</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script type="module">
 
 
@@ -182,9 +202,6 @@ Session.prototype.candidateDeal = function(data){
 Session.prototype.stopSession = function() {
     console.log("removing " + this.fid);
     delete sessions[this.fid];
-
-    var that = this;
-
     if (this.checker != null) {
         window.clearTimeout(this.checker);
         this.checker = null;
@@ -193,9 +210,7 @@ Session.prototype.stopSession = function() {
     if(this.pc != null){
         var mpc = this.pc;
         window.setTimeout(function () {
-
             stopCall(); // that is if we killed the (only) pc then byebye
-
         },5000);
         this.pc = null;
     }
@@ -285,7 +300,6 @@ Session.prototype.addStream = function(stream,kind) {
     }
     console.log("got new stream" + stream + " kind =" + kind);
     if (kind.indexOf("audio") != -1) {
-        var that = this;
         $("#chosenAction").show();
     }
     var them = document.getElementById("them");
@@ -297,21 +311,18 @@ Session.prototype.addStream = function(stream,kind) {
 };
 
 
-Session.prototype.sendNewTrack = function(videoTrack){
-    sessions.forEach((id,session) => {
-        if (id !== this.fid) {
-            let sender = session.pc.getSenders().find(function(s) {
-                return ((!s.track) || ( s.track.kind === "video"));
-            });
-            if (sender) {
-                sender.replaceTrack(videoTrack);
-            } else {
-                session.pc.addTrack(videoTrack);
-            }
-        } else {
-            console.log("skip self " + id);
-        }
+Session.prototype.sendNewTrack = function(track){
+    var session = this;
+    let sender = session.pc.getSenders().find(function(s) {
+        return ((!s.track) || ( s.track.kind === track.kind));
     });
+    if (sender) {
+        console.log("replace track "+track.kind+" with "+track.id)
+        sender.replaceTrack(track);
+    } else {
+        console.log("add track "+track.kind+" id "+track.id)
+        session.pc.addTrack(track);
+    }
 }
 
 
@@ -458,7 +469,7 @@ function candyProt(candy){
         } else {
             console.log("missing action");
         }
-        $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
+        $("#status").text("Call connected to "+ (Object.keys(sessions).length-1) + " member(s).");
 
     }
 
@@ -479,42 +490,28 @@ function candyProt(candy){
         }
     }
 
-async function captureRegion() {
-    // set mcu  somehow.
-    mcu = await navigator.mediaDevices.getDisplayMedia({
-        audio: false,
-        video: true,
-        preferCurrentTab: true
-    });
-    var mcuT = mcu.getVideoTracks()[0];
-    if ((cropVideo) && (mcuT.cropTo)) {
-        await mcuT.cropTo(cropVideo);
-    } else {
-        console.log("No cropTarget or cropTo")
-    }
-}
 
-
+var idealConstraints = {audio: {}, video: {
+        width: {  ideal: 240 },
+        height: { ideal: 320 },
+        frameRate: {ideal: 15},
+    }};
     // plumb the local audio together.
 function setupAudio() {
-    var idealConstraints = {audio: true, video: {
-            width: {  ideal: 240 },
-            height: { ideal: 320 },
-            frameRate: {ideal: 15},
-        }};
 
     var promise = new Promise(function (resolve, reject) {
         navigator.mediaDevices.getUserMedia(idealConstraints)
             .then((stream) => {
                 localStream = stream;
-                var pc = sessions[cid].pc; // implicit detection of us being a guest
+                var session= sessions[cid]; // implicit detection of us being a guest
                 stream.getTracks().forEach(track => {
-                    pc.addTrack(track, stream);
+                    session.sendNewTrack(track);
                     console.log("added local track ", track.id, track.kind);
                     /*if (track.kind === "video") {
                         setCodecOrder(pc, track);
                     }*/
                 });
+                listDevices();
                 resolve(false);
             })
             .catch((e) => {
@@ -525,22 +522,50 @@ function setupAudio() {
     return promise;
 }
 
+function listDevices(){
+    navigator.mediaDevices.enumerateDevices().then((mdis)=>{
+        let q= '"';
+        var mdimap = (mdi) => {return (mdi.deviceId === 'default')?`${mdi.deviceId}(${mdi.label})`:mdi.label}
+        var ain = mdis.filter((m) => m.kind === "audioinput").map((mdi) =>"<li"+" data="+q+mdi.deviceId+q+">"+mdimap(mdi)+"</li>").join("\n");
+        var aout = mdis.filter((m) => m.kind === "audiooutput").map((mdi) =>"<li"+" data="+q+mdi.deviceId+q+">"+mdimap(mdi)+"</li>").join("\n");
+        var vin = mdis.filter((m) => m.kind === "videoinput").map((mdi) =>"<li"+" data="+q+mdi.deviceId+q+">"+mdimap(mdi)+"</li>").join("\n");
+        document.getElementById("ain").innerHTML=ain;
+        document.getElementById("ain").onclick = (ev) => {
+            var did = ev.target.getAttribute("data");
+            idealConstraints.audio.deviceId = did;
+            console.log("new constraints are "+JSON.stringify(idealConstraints));
+            setupAudio();
+        }
+        document.getElementById("vin").innerHTML=vin;
+        document.getElementById("vin").onclick = (ev) => {
+            var did = ev.target.getAttribute("data");
+            idealConstraints.video.deviceId = did;
+            console.log("new constraints are "+JSON.stringify(idealConstraints));
+            setupAudio();
+        }
+        document.getElementById("aout").innerHTML=aout;
+        document.getElementById("aout").onclick = (ev) => {
+            var did = ev.target.getAttribute("data");
+            console.log("setting new sink id.");
+            var audio = document.getElementById("them");
+            audio.setSinkId(did)
+                .then( () => console.log(`Audio is being played on ${audio.sinkId}`))
+                .catch((re) => console.log(`Cant change audio out to ${did} because ${re}`));
+        }
+        });
+}
+
     function setupRTC() {
         var session = new Session(cid);
         session.setupRTC();
         sessions[cid] = session;
     }
 
-    var playing = false;
 
-    function toggleplay(){
+
+    function forcePlay(){
         var audio = document.getElementById('them');
-        if (!playing) {
-            audio.play();
-        } else {
-            audio.pause();
-        }
-        playing = ! playing;
+        audio.play();
     }
     function shared() {
         setupRTC();
@@ -590,29 +615,29 @@ function setupAudio() {
 
 async function setRole() {
     cid = $.getUrlVar("clubId");
-    mid = localStorage['clubId'];
-    if (!mid) {
-        var array = new Uint32Array(8);
-        window.crypto.getRandomValues(array);
-        var hexCodes = [];
-        for (var i = 0; i < array.length; i ++ ){
-            // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
-            var value = array[i];
-            // toString(16) will give the hex representation of the number without padding
-            var stringValue = value.toString(16);
-            // We use concatenation and slice for padding
-            var padding = '00000000';
-            var paddedValue = (padding + stringValue).slice(-padding.length)
-            hexCodes.push(paddedValue);
-        }
-        mid = hexCodes.join("").toLowerCase();
-        console.log("mid =", mid);
-        localStorage['clubId'] = mid;
+
+    var array = new Uint32Array(8);
+    window.crypto.getRandomValues(array);
+    var hexCodes = [];
+    for (var i = 0; i < array.length; i ++ ){
+        // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
+        var value = array[i];
+        // toString(16) will give the hex representation of the number without padding
+        var stringValue = value.toString(16);
+        // We use concatenation and slice for padding
+        var padding = '00000000';
+        var paddedValue = (padding + stringValue).slice(-padding.length)
+        hexCodes.push(paddedValue);
     }
+    mid = hexCodes.join("").toLowerCase();
+    console.log("mid =", mid);
+
     properties = await loadProps();
     socket = new WebSocket( properties.wsurl + mid);
+
     socket.onmessage = messageDeal;
     socket.onopen = (_) => {
+        console.log("connected as = "+properties.wsurl + mid);
         var url = document.location.href;
         console.log("href = "+url);
         $("#role").text("Guest");
@@ -730,8 +755,24 @@ function clearCodecOrder(pc,track){
 
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
+        document.getElementById("settings").onclick = (e) => $("#audiosettings").modal('show');
+        var them = document.getElementById("them");
+        them.onplay = (event) => {
+            $("#play").hide();
+            console.log("playing");
+        };
+        them.onpause = (event) => {
+            $("#play").show();
+            console.log("paused");
+        };
+        var play = document.getElementById("play");
+        play.onclick = forcePlay;
+        them.onclick = forcePlay;
 
-
+        navigator.mediaDevices.ondevicechange = (change) => {
+            listDevices();
+        }
+        listDevices();
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             $("#mute").click(_ => setMute(!mute));
             setRole();

@@ -71,10 +71,6 @@
             <button id="mute" type="button" class="col-4 btn btn-primary btn-lg"><i id="muteIcon" class="fa fa-microphone fa-2x" aria-hidden="true"></i></button>
             <button id="stopCall" type="button" class="col-4 btn btn-primary btn-lg"><i id="stopIcon" class="fa fa-stop fa-2x" aria-hidden="true"></i></button>
         </div>
-        <div class="card-img-bottom row">
-            <div class="col"><img style="width:inherit;" src="front.PNG" ></img> </div>
-            <div class="col"><img style="width:inherit;" src="back.jpg"></img></div>
-        </div>
     </div>
     <div class="card-footer">
         <h2><span class="badge badge-primary" id="role"></span><span class="badge badge-primary" id="status"></span></h2>
@@ -99,6 +95,7 @@
                 <p>Then email/sms it to each of the book club members</p>
                 <p>Then press 'done'</p>
             </div>
+            <div id="shareURL"></div>
             <div class="modal-footer">
                 <button id="shareDone" type="button" class="btn btn-secondary" data-dismiss="modal" >Done</button>
             </div>
@@ -391,17 +388,11 @@ Session.prototype.setupRTC = function(){
         if ('ontrack' in this.pc) {
             // if so we use it
             this.pc.ontrack = (event) => {
-                var stream = event.streams[0];
                 console.log("got remote track ", event.track.kind);
-                this.addStream(stream,event.track.kind);
+                this.addTrack(event.track);
             };
         } else {
-            // if not we use add stream instead
-            this.pc.onaddstream = (event) => {
-                var stream = event.stream;
-                console.log("got remote stream ", stream.kind);
-                this.addStream(stream);
-            }
+            console.log("no ontrack");
         }
 
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
@@ -465,13 +456,12 @@ Session.prototype.tellAll = function() {
         }
     });
 };
-    Session.prototype.addStream = function(stream,kind) {
-        if (!kind) {
-            kind = "audio/video";
-        }
+    Session.prototype.addTrack = function(track) {
         $("#status").text("Call connected to " + Object.keys(sessions).length + " member(s).");
-        console.log("got new stream" + stream + " kind =" + kind);
-        if (kind.indexOf("audio") != -1) {
+        console.log("got new track" + track.label + " kind =" + track.kind);
+        var stream = new MediaStream();
+        stream.addTrack(track);
+        if (track.kind === "audio") {
                 // inbound....
                 this.peerin = myac.createMediaStreamSource(stream);
                 this.panned = myac.createStereoPanner();
@@ -540,15 +530,14 @@ Session.prototype.tellAll = function() {
             console.log('Audio sample Rate is ' + myac.sampleRate);
             $("#statsZone").show();
         }
-        this.addVstream(stream, kind);
+        this.addVstream(stream);
     };
 
     Session.prototype.addVstream = function(stream) {
         // note that this is mostly for video, but we also add (muted) audio because chrome is dumb
         if (isChrome) {
             this.audio.srcObject = stream;
-            this.audio.play();
-            console.log("added stream to local media object");
+            console.log("added stream a local media object");
         }
     };
 
@@ -776,7 +765,7 @@ async function captureRegion() {
 function setupAudio() {
     myac = new AudioContext();
     $("#them").muted = true;
-    captureRegion();
+    return captureRegion();
 }
 
     function setupRTC() {
@@ -877,6 +866,8 @@ function setupAudio() {
                 $("#role").text("Host");
                 $("#status").text("Waiting for connection");
                 smodal = "#share";
+                var guest = url.replace("host.html","guest.html")+"?clubId="+cid;
+                $("#shareURL").text(guest);
             }
             $(smodal).modal('show');
         };
