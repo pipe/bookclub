@@ -190,7 +190,7 @@ function Session(id,lpan) {
 
     // add an video tag per recipient because chrome needs some suckage on the pipe...
     this.audio = document.createElement("video");
-    this.audio.muted = true;
+    this.audio.muted = false;
     this.audio.setAttribute("autoplay","true");
     this.rdiv.appendChild(this.audio);
     this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;");
