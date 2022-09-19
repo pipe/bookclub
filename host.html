@@ -60,7 +60,6 @@
             <div class="col" id="0.8"></div>
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline ></video>
-        <video id="me" playsinline autoplay muted ></video>
         <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
@@ -74,7 +73,6 @@
     </div>
     <div class="card-footer">
         <h2><span class="badge badge-primary" id="role"></span><span class="badge badge-primary" id="status"></span></h2>
-        <!--div style="width: 80px; height: 80px;" id="me">me</div-->
         <br/>
         <span>See our <a href="https://github.com/pipe/bookclub">Github</a> for source code</span>
         <span>See also <a href="https://pi.pe/privacy_policy/index.html">Privacy</a>
@@ -103,22 +101,6 @@
     </div>
 </div>
 
-<div id="accept" class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Accept a book club session</h5>
-            </div>
-            <div class="modal-body">
-                <p>Click 'accept' to start the call.</p>
-                <p>You also need to permit access to your microphone</p>
-            </div>
-            <div class="modal-footer">
-                <button id="callAccept" type="button" class="btn btn-secondary" data-dismiss="modal" >Accept</button>
-            </div>
-        </div>
-    </div>
-</div>
 <div id="nowebrtc" class="modal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -212,13 +194,6 @@ function Session(id,lpan) {
     this.audio.setAttribute("autoplay","true");
     this.rdiv.appendChild(this.audio);
     this.rdiv.setAttribute("style","border-width:medium; border-style:hidden;");
-    var remotes = document.getElementById("remotes");
-    CropTarget.fromElement(remotes).then((t) => {
-        cropVideo = t;
-        console.log("got crop Target");
-    });
-
-
     remoteslot.appendChild(this.rdiv);
 };
 
@@ -472,7 +447,6 @@ Session.prototype.tellAll = function() {
 
                 var that = this;
 
-
                 this.dcomp = myac.createDynamicsCompressor();
 
                 Object.entries(sessions).forEach(sessionkva => {
@@ -518,13 +492,6 @@ Session.prototype.tellAll = function() {
                         console.log("added mcu outbound stream");
                     }
                 }
-
-            var that = this;
-            this.checker = window.setInterval(function () {
-                that.checkLoss();
-            }, 1000);
-
-
             // audio together here.
             // depends on role
             console.log('Audio sample Rate is ' + myac.sampleRate);
@@ -557,74 +524,6 @@ Session.prototype.sendNewTrack = function(videoTrack){
         }
     });
 }
-Session.prototype.checkLoss = function(){
-    var that = this;
-    if (this.pc) {
-        this.pc.getReceivers()[0].getStats().then(
-            function (rs) {
-                var style = "";
-                rs.forEach(function (d) {
-                    if (d.type === "inbound-rtp") {
-                        var recvd = d.packetsReceived;
-                        var lost = d.packetsLost;
-                        var colour = "grey";
-                        if (lost > that.lastLoss) {
-                            var diffl = lost - that.lastLoss;
-                            var diffp = recvd - that.lastRecv;
-                            var pct = Math.ceil(100.0 * diffl / diffp);
-                            if (pct > 0) {
-                                colour = rgb(128 + pct, 128, 128);
-                            }
-                        }
-                        that.lastLoss = lost;
-                        that.lastRecv = recvd;
-                        style += "background-color:" + colour + "; ";
-
-                    }
-                    if (d.type === "track") {
-                        that.audioLevel = d.audioLevel;
-                        var bwidth = Math.floor((that.audioLevel * 10.0));
-                        if (bwidth >= 2){
-                            style += " border-style:outset; ";
-                        } else {
-                            style += " border-style:hidden; ";
-                        }
-                        //console.log("bwidth ="+bwidth);
-                    }
-
-                }
-
-                );
-
-
-            });
-    }
-}
-
-
-function rgb
-(r, g,
- b){
-    r = Math.floor(r);
-    g = Math.floor(g);
-    b = Math.floor(b);
-    return ["rgb(",r,",",g,",",b,")"].join("");
-}
-
-    // message stuff - used to create direct connection to peer over WEBRTC
-
-    function tweakSDP(sdp){
-        var lines = sdp.split("\r\n");
-        for (var i=0;i<lines.length;i++){
-            var line = lines[i];
-            if (line.startsWith("a=fmtp:111")){
-                lines[i]= "a=fmtp:111 minptime=20; stereo=1; ptime=60; useinbandfec=1; maxaveragebitrate=32000";
-            }
-        }
-        return (lines.join("\r\n"));
-    }
-
-
 function messageDeal(event){
     //console.log("message is ", event.data);
     var data = JSON.parse(event.data);
@@ -674,43 +573,6 @@ function candyProt(candy){
         socket.send(message);
     }
 
-    // button actions
-    // this is singular -
-    function startCall(fid){
-
-        var that = sessions[cid];
-        var pc = that.pc;
-
-        that.statusChannel = pc.createDataChannel("status-"+Date.now());
-        that.statusChannel.onopen = () => {
-            console.log("guest's status channel opened - sending ping");
-            that.statusChannel.send(JSON.stringify({act:"ping",date:Date.now()}));
-        };
-        that.statusChannel.onclose = (e) => {
-            console.log("guest's status channel closed "+e);
-        };
-        that.statusChannel.onerror = (e) => {
-            console.log("guest's status channel errored "+e);
-        };
-        console.log("created status datachannel");
-        that.statusChannel.onmessage = (evt) => {
-            statusDeal(evt);
-        };
-        pc.createOffer(peerConnectionOfferAnswerCriteria)
-            .then(desc => {
-                console.log("offer created",);
-                //desc.sdp = tweakSDP(desc.sdp);
-                pc.setLocalDescription(desc).then( d => {
-                    sendMessage(fid, mid, desc.type, desc.sdp);
-                    $("#status").text("Making call to host");
-                }).catch (
-                    e => {
-                        console.log("Set Local failed");
-                    }
-                );
-            })
-            .catch(e => console.log("offer not created due to ", e) );
-    }
 
 
     function stopCall(){
@@ -747,6 +609,9 @@ function candyProt(candy){
 
 async function captureRegion() {
     // set mcu  somehow.
+    var remotes = document.getElementById("remotes");
+    cropVideo = await CropTarget.fromElement(remotes);
+    console.log("got crop Target");
     mcu = await navigator.mediaDevices.getDisplayMedia({
         audio: false,
         video: true,
@@ -768,36 +633,11 @@ function setupAudio() {
     return captureRegion();
 }
 
-    function setupRTC() {
-        var session = new Session(cid);
-        session.setupRTC();
-        sessions[cid] = session;
-    }
 
-    var playing = false;
-
-    function toggleplay(){
-        var audio = document.getElementById('them');
-        if (!playing) {
-            audio.play();
-        } else {
-            audio.pause();
-        }
-        playing = ! playing;
-    }
     function shared() {
-        setupRTC();
         setupAudio().then(_ => {
             console.log("ready for offer");
             $("#status").text("Waiting for guests.");
-        });
-    }
-    function accepted() {
-        setupRTC();
-        setupAudio().then(_ => {
-            console.log("ready for offer");
-            $("#status").text("Mic available");
-            startCall(cid)
         });
     }
 
@@ -982,11 +822,7 @@ function clearCodecOrder(pc,track){
         $("#them").hide();
         $("#vids").show();
 
-        document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
-
-        //document.getElementById("me").onclick = toggleplay;
-
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
             setRole();
