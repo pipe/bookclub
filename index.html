@@ -710,11 +710,12 @@ function messageDeal(event){
     var session = sessions[data.from];
     switch (data.type) {
         case "offer":
-            if ((session == null) && (initiator)) {
+            if (initiator){
+                if (session != null) {
+                    session.stopSession();
+                }
                 session = new Session(data.from);
                 sessions[data.from] = session;
-            }
-            if (initiator){
                 session.offerDeal(data);
             } else {
                 console.log("huh? Guests send offers");
@@ -912,9 +913,9 @@ function setupAudio() {
                         stream.getTracks().forEach(track => {
                             pc.addTrack(track, stream);
                             console.log("added local track ", track.id, track.kind);
-                            /*if (track.kind === "video") {
+                            if (track.kind === "video") {
                                 setCodecOrder(pc, track);
-                            }*/
+                            }
                         });
                     } else {
                         pc.addStream(stream);
@@ -1083,7 +1084,7 @@ function tweakOpus(send) {
         console.log(paras);
         if ((paras) && (paras.encodings)) {
             paras.encodings[0].maxBitrate = 64000;
-            //paras.encodings[0].ptime = 60;
+            paras.encodings[0].ptime = 60;
             send.setParameters(paras);
             console.log(paras);
         }
