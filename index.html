@@ -60,8 +60,6 @@
             <div class="col" id="0.8"></div>
         </div>
         <video id="them" style="width:100%;height:fit-content;" autoplay playsinline ></video>
-        <video id="me" playsinline autoplay muted ></video>
-        <audio id="audio" style="display:none;" autoplay playsinline > </audio>
     </div>
 
 
@@ -78,7 +76,6 @@
     </div>
     <div class="card-footer">
         <h2><span class="badge badge-primary" id="role"></span><span class="badge badge-primary" id="status"></span></h2>
-        <!--div style="width: 80px; height: 80px;" id="me">me</div-->
         <br/>
         <span>See our <a href="https://github.com/pipe/bookclub">Github</a> for source code</span>
         <span>See also <a href="https://pi.pe/privacy_policy/index.html">Privacy</a>
@@ -177,6 +174,8 @@ var isChrome = ("chrome" in window);
 var properties = {};
 var cropVideo = null;
 const mungeing = false;
+var remoteStream;
+
 
 
 var pans = [ -0.9, 0.9, -0.6, -0.2, 0.2, 0.6 , -0.8, -0.4, 0.4, 0.8,0];
@@ -234,7 +233,7 @@ Session.prototype.offerDeal = function (data) {
     this.setupRTC();
     this.pc.setRemoteDescription(data).then(_ =>
         this.pc.createAnswer(peerConnectionOfferAnswerCriteria).then(ans => {
-            //ans.sdp = tweakSDP(ans.sdp);
+            ans.sdp = tweakSDP(ans.sdp);
             this.pc.setLocalDescription(ans).then(_ =>
                 sendMessage(this.fid, mid, "answer", ans.sdp)
             )
@@ -259,6 +258,15 @@ Session.prototype.candidateDeal = function(data){
         .then( _ => console.log("added remote candidate"))
         .catch((e) => console.log("couldn't add candidate ", e));
 };
+Session.prototype.disconnect = function(nodea,nodeb){
+    if((nodea != null) && (nodeb != null)){
+        try {
+            nodea.disconnect(nodeb);
+        } catch {
+            console.log("a not connected to b...")
+        }
+    }
+}
 Session.prototype.stopSession = function() {
     console.log("removing " + this.fid);
     delete sessions[this.fid];
@@ -267,52 +275,31 @@ Session.prototype.stopSession = function() {
     if (initiator) {
         Object.entries(sessions).forEach(sessionkva => {
             var session = sessionkva[1];
-            if (that.dcomp && session.panned) {
-                try {
-                    session.panned.disconnect(that.dcomp);
-                } catch (e) {
-                    console.log("session not connected to dcomp...")
-                }
-            }
-            if (that.panned && session.dcomp) {
-                try {
-                    that.panned.disconnect(session.dcomp);
-                } catch (e) {
-                    console.log("panned not connected to dcomp...")
-                }
-            }
+            that.disconnect(that.dcomp,session.panned);
+            that.disconnect(that.panned,session.dcomp);
             if (session.statusChannel && (session.statusChannel.readyState == 'open')) {
                 session.statusChannel.send(JSON.stringify({act: 'del', fid: that.fid})); // I hear them
             }
         });
     }
-    if (localpanned){
-        try {
-            localpanned.disconnect(this.dcomp);
-        } catch (e) {
-            console.log("local not connected to dcomp...")
-        }
-    }
+    this.disconnect(localpanned,this.dcomp);
+
     if (this.panned != null) {
-        try {
-            this.panned.disconnect(localdcomp);
-        } catch (e) {
-            console.log("panned not connected to localdcomp...")
-        }
+        this.disconnect(this.panned,localdcomp);
         this.panned = null;
         pans.push(this.pan);
     }
     try {
         if (this.dcomp != null) {
-            this.dcomp.disconnect();
+            try {this.dcomp.disconnect();} catch {console.log("disconnect failed")}
             this.dcomp = null;
         }
         if (this.peerout != null) {
-            this.peerout.disconnect();
+            try {this.peerout.disconnect();} catch {console.log("disconnect failed")}
             this.peerout = null;
         }
         if (this.peerin != null) {
-            this.peerin.disconnect();
+            try {this.peerin.disconnect();} catch {console.log("disconnect failed")}
             this.peerin = null;
         }
     } catch (e) {
@@ -350,7 +337,6 @@ Session.prototype.stopSession = function() {
             console.log("dom tidy up failed");
         }
     }
-
     $("#status").text("Call connected to "+ Object.keys(sessions).length + " member(s).");
 };
 Session.prototype.setupRTC = function(){
@@ -378,6 +364,10 @@ Session.prototype.setupRTC = function(){
                 var sendtr = this.pc.getTransceivers().find( (tr) => tr &&  tr.sender && tr.sender.track && tr.sender.track.kind==="audio");
                 if (sendtr) {
                     tweakOpus(sendtr.sender);
+                }
+                sendtr = this.pc.getTransceivers().find( (tr) => tr &&  tr.sender && tr.sender.track && tr.sender.track.kind==="video");
+                if (sendtr) {
+                    tweakH264(sendtr.sender);
                 }
             }
             /*
@@ -410,17 +400,11 @@ Session.prototype.setupRTC = function(){
         if ('ontrack' in this.pc) {
             // if so we use it
             this.pc.ontrack = (event) => {
-                var stream = event.streams[0];
                 console.log("got remote track ", event.track.kind);
-                this.addStream(stream,event.track.kind);
+                this.gotTrackFromRemote(event.track);
             };
         } else {
-            // if not we use add stream instead
-            this.pc.onaddstream = (event) => {
-                var stream = event.stream;
-                console.log("got remote stream ", stream.kind);
-                this.addStream(stream);
-            }
+            console.log("Missing ontrack");
         }
 
         // use this to determine the state of the 'hangup' button and send any candidates we found quickly
@@ -484,117 +468,117 @@ Session.prototype.tellAll = function() {
         }
     });
 };
-    Session.prototype.addStream = function(stream,kind) {
-        if (!kind) {
-            kind = "audio/video";
-        }
-        $("#status").text("Call connected to " + Object.keys(sessions).length + " member(s).");
-        console.log("got new stream" + stream + " kind =" + kind);
-        if (kind.indexOf("audio") != -1) {
-            if (initiator) {
-                // inbound....
-                this.peerin = myac.createMediaStreamSource(stream);
-                this.panned = myac.createStereoPanner();
-                this.panned.pan.value = this.pan;
-                console.log("panned to " + this.pan);
-                this.peerin.connect(this.panned);
-
-                // now connect panned to :
-                // local destination...
-
-                // plug the panned output into our dcomp so we get the stereo effect as host.
-                if (localdcomp != null) {
-                    this.panned.connect(localdcomp);
-                } else {
-                    console.log("nowhere to plug " + this.fid);
-                }
-
-                var that = this;
-
-                // outbound
-                // for now just add the localpanned stream
-
-                this.dcomp = myac.createDynamicsCompressor();
-                if (localpanned) {
-                    localpanned.connect(this.dcomp);
-                    console.log("connect local stream to dcomp");
-                }
-
-                Object.entries(sessions).forEach(sessionkva => {
-                    var id = sessionkva[0];
-                    if (id != this.fid) {
-                        var session = sessionkva[1];
-                        if (that.panned && session.dcomp) {
-                            that.panned.connect(session.dcomp); // they hear me
-                        }
-                        if (that.dcomp && session.panned) {
-                            session.panned.connect(that.dcomp); // I hear them
-                        }
-                    } else {
-                        console.log("skip me " + id);
-                    }
-
-                });
-
-
-                this.peerout = myac.createMediaStreamDestination();
-                this.dcomp.connect(this.peerout);
-                var pc = this.pc;
-                var pstream = this.peerout.stream;
-                if (pc.addTrack) {
-                    pstream.getTracks().forEach(track => {
-                        pc.addTrack(track, pstream);
-                        console.log("added panned outbound track ", track.id, track.kind, track.label);
-                    });
-                    if (mcu) {
-                        mcu.getTracks().forEach(track => {
-                            pc.addTrack(track, mcu);
-                            if (track.kind === "video") {
-                                setCodecOrder(pc, track);
-                            }
-                            console.log("added mcu outbound track ", track.id, track.kind, track.label);
-                        });
-                    }
-                } else {
-                    pc.addStream(pstream);
-                    console.log("added panned outbound stream");
-                    if (mcu) {
-                        pc.addStream(mcu);
-                        console.log("added mcu outbound stream");
-                    }
-                }
-            }
-            var that = this;
-            this.checker = window.setInterval(function () {
-                that.checkLoss();
-            }, 1000);
-
-
-            // audio together here.
-            // depends on role
-            console.log('Audio sample Rate is ' + myac.sampleRate);
-            $("#chosenAction").show();
-            $("#statsZone").show();
-        }
-        if (initiator) {
-            this.addVstream(stream, kind);
-        } else {
-            if (kind.indexOf("audio") != -1) {
-                console.log("added remote "+kind+" stream to audio");
-                var au = document.getElementById("audio");
-                au.srcObject = stream;
-                au.play();
+    Session.prototype.gotTrackFromRemote = function(rtrack){
+        if (initiator){
+            if (rtrack.kind === "audio"){
+                this.addRemoteAudioTrack(rtrack);
             } else {
+                this.addRemoteVideoTrack(rtrack);
+            }
+        } else {
+            console.log("guest got new track,  kind =" + rtrack.kind);
+            remoteStream.addTrack(rtrack);
+            if (remoteStream.getTracks().length === 2) {
                 var them = document.getElementById("them");
-                if (them.srcObject == null) {
-                    console.log("added remote " + kind + " stream to videotag");
-                    them.srcObject = stream;
+                them.srcObject = remoteStream;
+                this.audio = them;
+                them.onloadedmetadata = function (e) {
+                    them.play();
+                    them.muted = false;
                     $("#them").show();
-                }
+                    $("#vids").hide();
+                };
             }
         }
+    }
+    Session.prototype.addRemoteVideoTrack = function(rtrack) {
+        var videoStream = new MediaStream();
+        videoStream.addTrack(rtrack);
+        this.addVstream(videoStream, rtrack.kind);
+    }
+Session.prototype.addRemoteAudioTrack = function(rtrack) {
+    $("#status").text("Call connected to " + Object.keys(sessions).length + " member(s).");
+    var audioStream = new MediaStream();
+    audioStream.addTrack(rtrack);
 
-    };
+    // inbound....
+    this.peerin = myac.createMediaStreamSource(audioStream);
+    this.panned = myac.createStereoPanner();
+    this.panned.pan.value = this.pan;
+    console.log("panned to " + this.pan);
+    this.peerin.connect(this.panned);
+
+    // now connect panned to :
+    // local destination...
+
+    // plug the panned output into our dcomp so we get the stereo effect as host.
+    if (localdcomp != null) {
+        this.panned.connect(localdcomp);
+    } else {
+        console.log("nowhere to plug " + this.fid);
+    }
+
+    var that = this;
+
+    // outbound
+    // for now just add the localpanned stream
+
+    this.dcomp = myac.createDynamicsCompressor();
+    if (localpanned) {
+        localpanned.connect(this.dcomp);
+        console.log("connect local stream to dcomp");
+    }
+
+    Object.entries(sessions).forEach(sessionkva => {
+        var id = sessionkva[0];
+        if (id != this.fid) {
+            var session = sessionkva[1];
+            if (that.panned && session.dcomp) {
+                that.panned.connect(session.dcomp); // they hear me
+            }
+            if (that.dcomp && session.panned) {
+                session.panned.connect(that.dcomp); // I hear them
+            }
+        } else {
+            console.log("skip me " + id);
+        }
+
+    });
+
+
+    this.peerout = myac.createMediaStreamDestination();
+    this.dcomp.connect(this.peerout);
+    var pc = this.pc;
+    var pstream = this.peerout.stream;
+    if (pc.addTrack) {
+        pstream.getTracks().forEach(track => {
+            pc.addTrack(track, pstream);
+            console.log("added panned outbound track ", track.id, track.kind, track.label);
+        });
+        if (mcu) {
+            mcu.getTracks().forEach(track => {
+                pc.addTrack(track, mcu);
+                if (track.kind === "video") {
+                    setCodecOrder(pc, track);
+                }
+                console.log("added mcu outbound track ", track.id, track.kind, track.label);
+            });
+        }
+    }
+
+    var that = this;
+    this.checker = window.setInterval(function () {
+        that.checkLoss();
+    }, 1000);
+
+
+// audio together here.
+// depends on role
+    console.log('Audio sample Rate is ' + myac.sampleRate);
+    $("#chosenAction").show();
+    $("#statsZone").show();
+
+};
 
     Session.prototype.addVstream = function(stream) {
 
@@ -624,67 +608,9 @@ Session.prototype.sendNewTrack = function(videoTrack){
     });
 }
 Session.prototype.checkLoss = function(){
-    var that = this;
-    if (this.pc) {
-        this.pc.getReceivers()[0].getStats().then(
-            function (rs) {
-                var style = "";
-                rs.forEach(function (d) {
-                    if (d.type === "inbound-rtp") {
-                        var recvd = d.packetsReceived;
-                        var lost = d.packetsLost;
-                        var colour = "grey";
-                        if (lost > that.lastLoss) {
-                            var diffl = lost - that.lastLoss;
-                            var diffp = recvd - that.lastRecv;
-                            var pct = Math.ceil(100.0 * diffl / diffp);
-                            if (pct > 0) {
-                                colour = rgb(128 + pct, 128, 128);
-                            }
-                        }
-                        that.lastLoss = lost;
-                        that.lastRecv = recvd;
-                        style += "background-color:" + colour + "; ";
-
-                    }
-                    if (d.type === "track") {
-                        that.audioLevel = d.audioLevel;
-                        var bwidth = Math.floor((that.audioLevel * 10.0));
-                        if (bwidth >= 2){
-                            style += " border-style:outset; ";
-                        } else {
-                            style += " border-style:hidden; ";
-                        }
-                        //console.log("bwidth ="+bwidth);
-                    }
-                    /*if ((d.type ==="candidate-pair")&&(d.nominated)){
-                        $("#delay").text(""+d.currentRoundTripTime);
-                    }
-                    if (d.type === "remote-candidate"){
-                        $("#remote").text(d.candidateType);
-                    }
-                    if (d.type === "local-candidate"){
-                        $("#local").text(d.candidateType);
-                    }*/
-                }
-
-                );
-                //that.rdiv.setAttribute("style", style);
-                //console.log("style ="+style);
-
-            });
-    }
 }
 
 
-function rgb
-(r, g,
- b){
-    r = Math.floor(r);
-    g = Math.floor(g);
-    b = Math.floor(b);
-    return ["rgb(",r,",",g,",",b,")"].join("");
-}
 
     // message stuff - used to create direct connection to peer over WEBRTC
 
@@ -782,7 +708,7 @@ function candyProt(candy){
         pc.createOffer(peerConnectionOfferAnswerCriteria)
             .then(desc => {
                 console.log("offer created",);
-                //desc.sdp = tweakSDP(desc.sdp);
+                desc.sdp = tweakSDP(desc.sdp);
                 pc.setLocalDescription(desc).then( d => {
                     sendMessage(fid, mid, desc.type, desc.sdp);
                     $("#status").text("Making call to host");
@@ -873,7 +799,7 @@ function setupAudio() {
     var idealConstraints = {audio: true, video: {
         width: {  ideal: 240 },
         height: { ideal: 320 },
-        frameRate: {ideal: 30},
+        frameRate: {ideal: 15},
         //aspectRatio: { ideal: 1.7777777778 }
     }};
 
@@ -890,6 +816,8 @@ function setupAudio() {
         //console.log("local dcomp connected ");
         document.getElementById("them").srcObject = dests.stream;
         document.getElementById("them").play();
+    } else {
+        remoteStream = new MediaStream();
     }
 
     var promise = new Promise(function (resolve, reject) {
@@ -1052,7 +980,6 @@ function setupAudio() {
                     smodal = initiator ? "#share" : "#accept";
                 }
                 $(smodal).modal('show');
-                //Robohash.render(mid, document.getElementById("me"));
             };
             socket.onerror = (e) => {
                 console.log("can't open websocket", e);
@@ -1083,8 +1010,21 @@ function tweakOpus(send) {
         console.log("initial audio encoder params");
         console.log(paras);
         if ((paras) && (paras.encodings)) {
-            paras.encodings[0].maxBitrate = 64000;
+            paras.encodings[0].maxBitrate = 32000;
             paras.encodings[0].ptime = 60;
+            send.setParameters(paras);
+            console.log(paras);
+        }
+    }
+}
+function tweakH264(send) {
+    if(!mungeing) {
+        const paras = send.getParameters();
+        console.log("initial audio encoder params");
+        console.log(paras);
+        if ((paras) && (paras.encodings)) {
+            paras.encodings[0].maxBitrate = 1024000;
+            paras.encodings[0].maxFramerate = 15;
             send.setParameters(paras);
             console.log(paras);
         }
@@ -1167,8 +1107,6 @@ function clearCodecOrder(pc,track){
 
         document.getElementById("callAccept").onclick = accepted;
         document.getElementById("shareDone").onclick = shared;
-
-        //document.getElementById("me").onclick = toggleplay;
 
 
         if (('RTCPeerConnection' in window ) && ('createDataChannel' in RTCPeerConnection.prototype)){
